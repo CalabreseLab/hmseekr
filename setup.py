@@ -26,7 +26,6 @@ requirements = [
     "tqdm",
     "numpy",
     "pandas",
-    "itertools",
     "pickle",
     "scipy",
     "math",
