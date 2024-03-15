@@ -27,7 +27,7 @@
 # kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment if fasta=True
 
 ### Example:
-# testhits = findhits(searchpool='../fastaFiles/pool.fa',modeldir='../markovModels/hmm.dict',knum=4,outputname='hits',alphabet='ATCG',fasta=True,progress_bar=True)
+# testhits = findhits(searchpool='../fastaFiles/pool.fa',modeldir='../markovModels/hmm.dict',knum=4,outputname='hits',alphabet='ATCG',fasta=True,progressbar=True)
 
 
 ########################################################################################################
