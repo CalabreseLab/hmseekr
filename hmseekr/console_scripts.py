@@ -7,7 +7,7 @@ from hmseekr import kmers
 from hmseekr import train
 from hmseekr import findhits
 
-from seekr.__version__ import __version__
+from hmseekr.__version__ import __version__
 
 
 KMERS_DOC = """
