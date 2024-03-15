@@ -111,7 +111,7 @@ Output: dataframe object
 
 
 
-import corefunctions
+from hmseekr import corefunctions
 #from itertools import product
 #from itertools import starmap
 
