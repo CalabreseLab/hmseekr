@@ -27,7 +27,7 @@
 ########################################################################################################
 
 
-from hmseekr import kmersc
+import kmersc
 import pickle
 from itertools import starmap
 from itertools import product
