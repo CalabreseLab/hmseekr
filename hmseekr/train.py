@@ -90,7 +90,7 @@ kmers: list
 '''
 
 
-import corefunctions
+from hmseekr import corefunctions
 import sys
 import os
 import pickle
