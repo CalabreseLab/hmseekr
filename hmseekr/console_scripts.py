@@ -23,7 +23,7 @@ with the outer dictionary keys as kmer size and the inner dictionary keys as kme
 
 Example:
 generate count files for kmer size 2, 3, 4 using mXist repeat A sequence as input fasta file
-    $ hmseekr_kmers -fd './fastaFiles/mXist_rA.fa' -k 2,3,4 -a ATCG -dir ./counts/ -name repeatA
+    $ hmseekr_kmers -fd './fastaFiles/mXist_rA.fa' -k 2,3,4 -a ATCG -dir './counts/' -name repeatA
 
 minimal code with all settings to default
     $ hmseekr_kmers -fd './fastaFiles/mXist_rA.fa' -k 4 
@@ -51,7 +51,7 @@ and saves them to a binary file
 Example:
 train a model using previously generated kmer count files for repeatA and all lncRNA (hmseekr_kmers function) with kmer size 4
 and transition rates of 0.9999 for both query to query and null to null
-    $ hmseekr_train -qd './counts/repeatA.dict' -nd './counts/all_lncRNA.dict' -k 4 -a ATCG -qT 0.9999 -nT 0.9999 -qPre repeatA -nPre lncRNA -dir ./models/
+    $ hmseekr_train -qd './counts/repeatA.dict' -nd './counts/all_lncRNA.dict' -k 4 -a ATCG -qT 0.9999 -nT 0.9999 -qPre repeatA -nPre lncRNA -dir './models/'
 
 minimal code with all settings to default
     $ hmseekr_train -qd './counts/repeatA.dict' -nd './counts/all_lncRNA.dict' -k 4
