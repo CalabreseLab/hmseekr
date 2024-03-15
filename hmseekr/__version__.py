@@ -1,0 +1,7 @@
+__title__ = "hmseekr"
+__description__ = "HMM seekr search for high similar region based on seekr profile."
+__url__ = "https://github.com/CalabreseLab/hmseekr"
+__version__ = "1.0.0"
+__author__ = "Shuang Li, Daniel Sprague"
+__author_email__ = "shuang9@email.unc.edu; dsprague@med.unc.edu; mauro_calabrese@med.unc.edu"
+__license__ = "MIT"
