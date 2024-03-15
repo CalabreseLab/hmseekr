@@ -129,7 +129,7 @@ testmodel = train(querydir='./counts/repeatA.dict', nulldir='./counts/all_lncRNA
     .
     .
 
-
+<hr/>
 
 ## findhits: find high similar regions based on kmer profile within sequences of interest
 
