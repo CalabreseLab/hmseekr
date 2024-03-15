@@ -1,0 +1,20 @@
+os:
+  - linux
+  # Travis doesn't support Python on OSX, apparently
+  # https://docs.travis-ci.com/user/languages/python
+  # - osx
+language: python
+cache: pip
+python:
+  - "3.9"
+# command to install dependencies
+install:
+  - pip install pytest
+  - pip install -e .
+# command to run tests
+script: python -m pytest -p no:warnings -v
+notifications:
+  email:
+    recipients:
+      - shuang9@email.unc.edu
+      - mauro_calabrese@med.unc.edu
