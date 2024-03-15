@@ -26,10 +26,7 @@ requirements = [
     "tqdm",
     "numpy",
     "pandas",
-    "pickle",
     "scipy",
-    "math",
-    "operator",
 ]
 
 # ensure matplotlib to be greater than 3.5.3 which is compatible with python 3.7 and above
