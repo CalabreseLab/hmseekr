@@ -107,7 +107,7 @@ def console_hmseekr_kmers():
     parser.add_argument("-fd","--fadir", type=str,help='Path to input fasta file', required=True)
     parser.add_argument("-k","--kvec",type=str,help="Comma delimited string of possible k-mer values. For example, 3,4,5 or just 4", required=True)
     parser.add_argument("-a","--alphabet",type=str,help='String, Alphabet to generate k-mers (e.g. ATCG); default=ATCG',default='ATCG')
-    parser.add_argument("-dir","--outputdir'",type=str,help='Directory to save output count file',default='./')
+    parser.add_argument("-dir","--outputdir",type=str,help='Directory to save output count file',default='./')
     parser.add_argument("-name","--outputname",type=str,help='Desired output name for count file',default='out')
     
     args = _parse_args_or_exit(parser)
