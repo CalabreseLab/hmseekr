@@ -202,7 +202,7 @@ def _run_console_hmseekr_help(version):
     print(conclusion)
 
 
-def console_seekr_help():
+def console_hmseekr_help():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("-v", "--version", action="store_true", help="Print current version and exit.")
