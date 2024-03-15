@@ -1,6 +1,5 @@
 # hmseekr
 
-<hr/>
 
 This is a program for identifying regions of high similarity based on *k*-mer content to some set of query sequences, relative to a null background set of sequences.
 
