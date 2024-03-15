@@ -40,7 +40,7 @@ Prepare transition matrix, states and saves them to a binary file
 that countains a dictionary of dictionaries
 
 Details:
-this function takes in kmer count file for sequences of interest (e.g. query seq, functional regions of a ncRNA)
+this function takes in kmer count file for sequences of interest (e.g. query seq, functional regions of a lncRNA)
 and kmer count file for background sequences (e.g. null seq, transcriptome, genome)
 these kmer count files are generated using the kmers function
 with the k specified (which should be calculted in the kmers function)
