@@ -27,11 +27,11 @@
 ########################################################################################################
 
 
-import kmersc
+from hmseekr import kmersc
 import pickle
 from itertools import starmap
 from itertools import product
-import corefunctions
+from hmseekr import corefunctions
 
 
 def kmers(fadir,kvec,alphabet='ATCG',outputdir='./',outputname='out'):
