@@ -61,6 +61,7 @@ setup(
             "hmseekr_kmers = hmseekr.console_scripts:console_hmseekr_kmers",
             "hmseekr_train = hmseekr.console_scripts:console_hmseekr_train",
             "hmseekr_findhits = hmseekr.console_scripts:console_hmseekr_findhits",
+            "hmseekr = seekr.console_scripts:console_hmseekr_help",
         ]
     },
 )
