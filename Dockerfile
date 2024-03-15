@@ -2,6 +2,11 @@
 # FROM python:3.9.5
 FROM python:3.9.5-slim-buster
 
+# Install gcc and other necessary build tools
+RUN apt-get update && apt-get install -y \
+    gcc \
+    make
+
 # Set the working directory
 WORKDIR /usr/src/app
 
