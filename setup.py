@@ -15,7 +15,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 # Check if the Cython-generated C file exists
-c_source = "kmersc.c"
+c_source = "./hmseekr/kmersc.c"
 if os.path.exists(c_source):
     ext_modules = [Extension("kmersc", sources=[c_source])]
 else:
