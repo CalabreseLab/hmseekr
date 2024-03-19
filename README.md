@@ -22,7 +22,7 @@ if < 3.9, please install python 3.9 or above
 
 #### Install through Python Package Index (PyPI)
 ```
-	pip install hmseekr
+  pip install hmseekr
 ```
 This will make both the command line tool and the python module available.
 
