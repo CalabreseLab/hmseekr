@@ -43,7 +43,7 @@
 # a dataframe containing information about qT, nT, kmer number, and the mean, median, standard deviation of the hits sequences' pearson correlation r score to the query sequence
 
 ### Example:
-# from hmseekr import gridsearch
+# from hmseekr.gridsearch import gridsearch
 
 # testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa', 
 #                         nullfadir='./fastaFiles/all_lncRNA.fa', 
