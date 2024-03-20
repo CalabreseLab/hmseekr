@@ -31,7 +31,7 @@
 # the output is saved as a binary file with .dict extension
 
 ### Example:
-# from hmseekr import train
+# from hmseekr.train import train
 
 # testmodel = train(querydir='./counts/repeatA.dict', 
 #                   nulldir='./counts/all_lncRNA.dict',
