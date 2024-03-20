@@ -24,7 +24,7 @@
 # the output is saved as a binary file with .dict extension
 
 ### Example:
-# from hmseekr import kmers
+# from hmseekr.kmers import kmers
 
 # testdict = kmers(fadir='./fastaFiles/mXist_rA.fa',kvec='2,3,4',
 #                  alphabet='ATCG',outputname='repeatA',
