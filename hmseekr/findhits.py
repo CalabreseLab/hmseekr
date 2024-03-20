@@ -28,7 +28,7 @@
 # kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment if fasta=True
 
 ### Example:
-# from hmseekr import findhits
+# from hmseekr.findhits import findhits
 
 # testhits = findhits(searchpool='./fastaFiles/pool.fa',
 #                     modeldir='./markovModels/repeatA_lncRNA/4/hmm.dict',
