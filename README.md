@@ -98,7 +98,7 @@ from hmseekr.train import train
 
 testmodel = train(querydir='./counts/repeatA.dict', nulldir='./counts/all_lncRNA.dict',
                   kvec='2,3,4', alphabet='ATCG', queryT=0.9999, nullT=0.9999,
-                  queryPrefix='repeatA', nullPrefix='lncNRA', outputdir='./markovModels/')
+                  queryPrefix='repeatA', nullPrefix='lncRNA', outputdir='./markovModels/')
 ```
 
 #### Inputs:
