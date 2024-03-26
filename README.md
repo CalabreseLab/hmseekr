@@ -22,20 +22,20 @@ if < 3.9, please install python 3.9 or above
 
 #### Install through Python Package Index (PyPI)
 ```
-  pip install hmseekr
+pip install hmseekr
 ```
 This will make both the command line tool and the python module available.
 
 #### Install through Github
 ```
-  pip install git+https://github.com/CalabreseLab/hmseekr.git
+pip install git+https://github.com/CalabreseLab/hmseekr.git
 ```
 This will make both the command line tool and the python module available.
 
 #### Install through Docker Hub
 First you need to install Docker on your local computer. Then pull the Docker Image:
 ```
-  docker pull calabreselab/hmseekr:latest
+docker pull calabreselab/hmseekr:latest
 ```
 This will install the Docker container which enables running hmseekr from the command line or Jupyter Notebook. See below the hmseekr Docker Image section for more details.
 
@@ -53,7 +53,7 @@ This step should be performed for both query sequence and the background sequenc
 #### Console Example:
 generate kmer count files for kmer size 2, 3, 4 using mXist_rA.fa as input fasta file
 ```
-  hmseekr_kmers -fd './fastaFiles/mXist_rA.fa' -k 2,3,4 -a ATCG -name repeatA -dir './counts/' 
+hmseekr_kmers -fd './fastaFiles/mXist_rA.fa' -k 2,3,4 -a ATCG -name repeatA -dir './counts/' 
 ```
 
 #### Python Example:
@@ -88,7 +88,7 @@ It calculates the hidden state transition matrix, hidden state emission matrix, 
 #### Console Example:
 train a model using previously generated kmer count files for repeatA and all lncRNA (kmers, or hmseekr_kmers function) with kmer size 4 and transition rates of 0.9999 for both query to query and null to null. Save the model to the current directory.
 ```
-  hmseekr_train -qd './counts/repeatA.dict' -nd './counts/all_lncRNA.dict' -k 4 -a ATCG -qT 0.9999 -nT 0.9999 -qPre repeatA -nPre lncRNA -dir './'
+hmseekr_train -qd './counts/repeatA.dict' -nd './counts/all_lncRNA.dict' -k 4 -a ATCG -qT 0.9999 -nT 0.9999 -qPre repeatA -nPre lncRNA -dir './'
 ```
 
 #### Python Example:
@@ -140,7 +140,7 @@ This step uses precalculated model (emission matrix, prepared transition matrix,
 #### Console Example:
 use the previously trained model (hmm.dict by train/hmseekr_train function) to search for highly similar regions to query sequence (repeatA) within the pool.fa files (area of interest region to find sequences similar to repeatA, could be all lncRNAs or just chromosome 6) with kmer size 4 and save the hit sequences while showing progress bar
 ```
-  hmseekr_findhits -pool './fastaFiles/pool.fa' -m './markovModels/repeatA_lncRNA/4/hmm.dict' -k 4 -name 'hits' -dir './models/' -a 'ATCG' -fa -pb
+hmseekr_findhits -pool './fastaFiles/pool.fa' -m './markovModels/repeatA_lncRNA/4/hmm.dict' -k 4 -name 'hits' -dir './models/' -a 'ATCG' -fa -pb
 ```
 
 #### Python Example:
@@ -179,7 +179,7 @@ This function performs a grid search to find the best trasnition probabilities f
 perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99 with step of 0.01 with lengthfilter set to 25, which only keep the hit sequences with length greater than 25 for stats calculation
 
 ```
-  hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -qTmin 0.9 -qTmax 0.99 -qTstep 0.01 -nTmin 0.9 -nTmax 0.99 -nTstep 0.01 -lf 25 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
+hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -qTmin 0.9 -qTmax 0.99 -qTstep 0.01 -nTmin 0.9 -nTmax 0.99 -nTstep 0.01 -lf 25 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
 ```
 
 #### Python Example:
@@ -240,13 +240,13 @@ After you have successfully installed Docker. Start/Run the application and make
 
 From the command line, pull the Docker Image:
 ```
-$ docker pull calabreselab/hmseekr:latest
+docker pull calabreselab/hmseekr:latest
 ```
 You can replace `latest` with a specific tag if needed.
 
 2. Test Run the Docker Image
 ```
-$ docker run -it --rm calabreselab/hmseekr:latest
+docker run -it --rm calabreselab/hmseekr:latest
 ```
 The `-it` tag sets it to interactive mode. If you don't need to run the Docker container in interactive mode (i.e., you don't need a shell inside the container), you can simply omit the `-it` flag.
 This will print the user manual out to the command line, which is basically the same as you run the command `hmseekr` directly from command line when you pip install seekr. 
@@ -254,7 +254,7 @@ This will print the user manual out to the command line, which is basically the 
 ### Run Docker Image from command line
 You can run the seekr function from this Docker Image directly from command line with the following specified syntax.
 ```
-$ docker run -v /path/to/your/files:/data calabreselab/hmseekr:latest hmseekr_kmers -fd '/data/fastaFiles/mXist_rA.fa' -k 2,3,4 -a ATCG -name repeatA -dir '/data/counts/'
+docker run -v /path/to/your/files:/data calabreselab/hmseekr:latest hmseekr_kmers -fd '/data/fastaFiles/mXist_rA.fa' -k 2,3,4 -a ATCG -name repeatA -dir '/data/counts/'
 ```
 In this command:
 * `-v /path/to/your/files:/data`: This mounts the directory `/path/to/your/files` from your host machine (where /fastaFiles/mXist_rA.fa is located) to the `/data` directory inside the Docker container. Replace `/path/to/your/files` with the actual path to your files.
@@ -264,7 +264,7 @@ In this command:
 
 Examples of code mounts e:/test on Windows as the folder that contains the input and holds the output files:
 ```
-$ docker run -v e:/test:/data calabreselab/hmseekr:latest hmseekr_kmers -fd '/data/fastaFiles/mXist_rA.fa' -k 2,3,4 -a ATCG -name repeatA -dir '/data/counts/'
+docker run -v e:/test:/data calabreselab/hmseekr:latest hmseekr_kmers -fd '/data/fastaFiles/mXist_rA.fa' -k 2,3,4 -a ATCG -name repeatA -dir '/data/counts/'
 ```
 Basically you need to add: `docker run -v /path/to/your/files:/data calabreselab/hmseekr:latest` before the command line code for hmseekr (see above for examples of all functions).
 
@@ -273,7 +273,7 @@ If you want to work with python codes instead of directly calling from the comma
 
 1.  Run Docker Container with Interactive Terminal:
 ```
-$ docker run -it -p 8888:8888 -v /path/on/host:/path/in/container calabreselab/hmseekr:latest /bin/bash
+docker run -it -p 8888:8888 -v /path/on/host:/path/in/container calabreselab/hmseekr:latest /bin/bash
 ```
 This command will start the container and give you a bash terminal inside it. The `-p 8888:8888` flag maps the port *8888* from the container to your host machine so that you can access the Jupyter Notebook server.
 
@@ -283,12 +283,12 @@ When you use Jupyter Notebook now and create or save notebooks, they will be sto
 
 Example of code:
 ```
-$ docker run -it -p 8888:8888 -v e:/test:/data calabreselab/hmseekr:latest /bin/bash
+docker run -it -p 8888:8888 -v e:/test:/data calabreselab/hmseekr:latest /bin/bash
 ```
 
 2. Manually start Jupyter Notebook. From the bash terminal inside the Docker container:
 ```
-$ jupyter notebook --ip=0.0.0.0 --port=8888 --NotebookApp.token='' --NotebookApp.password='' --allow-root
+jupyter notebook --ip=0.0.0.0 --port=8888 --NotebookApp.token='' --NotebookApp.password='' --allow-root
 ```
 * `--ip=0.0.0.0`: Allow connections from any IP address. This is important for accessing Jupyter from outside the container.
 * `--port=8888`: Run Jupyter on this port. You can change this if needed, but remember to adjust the `-p` flag when starting the Docker container.
