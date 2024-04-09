@@ -64,6 +64,9 @@ setup(
             "hmseekr_train = hmseekr.console_scripts:console_hmseekr_train",
             "hmseekr_findhits = hmseekr.console_scripts:console_hmseekr_findhits",
             "hmseekr_gridsearch = hmseekr.console_scripts:console_hmseekr_gridsearch",
+            "hmseekr_fastarev = hmseekr.console_scripts:console_hmseekr_fastarev",
+            "hmseekr_genbed = hmseekr.console_scripts:console_hmseekr_genbed",
+            "hmseekr_genbedrev = hmseekr.console_scripts:console_hmseekr_genbedrev",
             "hmseekr = hmseekr.console_scripts:console_hmseekr_help"
         ]
     },

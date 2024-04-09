@@ -223,6 +223,311 @@ testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa',
 a dataframe containing information about qT, nT, kmer number, the total number of hits sequences and the mean, median, standard deviation of the hits sequences' pearson correlation r score to the query sequence and the mean, median, standard deviation of the length of the hits sequences after filtering by lengthfilter
 
 
+### fastarev: reverse fasta sequences
+
+This function reverses a fasta file and save it to a new file:'ATGC' will be reversed to 'CGTA'. This function takes in fasta file and reverse the sequence. If input fasta contains more than one sequence, each sequence will be reversed. Headers will be kept the same, only the sequences will be reversed. Keeping the headers the same will allow the user to match the reversed sequences to the original sequences easily. 
+
+#### Console Example:
+reverse the sequence of mouse Xist repeat A fasta file and save it to a new file while keeping the headers the same
+```
+hmseekr_fastarev -i '../fastaFiles/mXist_rA.fa' -o '../fastaFiles/mXist_rA_rev.fa'
+```
+
+#### Python Example:
+reverse the sequence of mouse Xist repeat A fasta file and save it to a new file while keeping the headers the same
+```python
+from hmseekr.fastarev import fastarev
+
+fastarev(input_file_path='../fastaFiles/mXist_rA.fa',
+         output_file_path='../fastaFiles/mXist_rA_rev.fa')
+```
+
+#### Inputs:
+
+1. input_file_path (-i): path to the input fasta file.
+2. output_file_path (-o): path and name to the output fasta file.
+
+
+#### Output:
+A fasta file with the reversed sequences and the SAME headers as the input fasta file. If the input fasta file contains more than one sequence, each sequence will be reversed.
+
+
+### genbed: filter hits sequences and generate bedfiles for regular/forward fasta
+
+This function firstly filter the hits output from findhits/hmseekr_findhits and then generate a bed file for the filtered hits. This function only applies to the output from findhits/hmseekr_findhits with the regular fasta file as input. For reversed fasta file, please use genbedrev/hmseekr_genbedrev. This function takes in the output from hmseekr_findhits and filter the hits based on the hit length and normalized kmerLLR score. kmerLLR is the log likelihood ratio of of the probability that the set of k-mers y within a hit derived from the QUERY versus the NULL state. It is the sum of the log2(Q/N) ratio for each kmer within a hit. The normalized kmerLLR (normLLR) is the kmerLLR divided by the hit length. So the normLLR is the log2 of the Q/N ratio, i.e. if set normLLR > 0.5, the Q/N ratio is ~ 1.41. Then all the hits after the filtering will be converted to a bedfile
+
+#### Console Example:
+generate bedfile for filtered hits from the hmseekr_findhits output file mm10expmap_queryA_4_viterbi.txt
+```
+hmseekr_genbed -hd '../mm10expmap_queryA_4_viterbi.txt' -o '../mm10expmap_queryA_4_viterbi' -len 25 -llr 0.5 -pb
+```
+
+#### Python Example:
+generate bedfile for filtered hits from the findhits output file mm10expmap_queryA_4_viterbi.txt
+```python
+from hmseekr.genbed import genbed
+
+testbed = genbed(hitsdir='../mm10expmap_queryA_4_viterbi.txt', 
+                 outputdir='../mm10expmap_queryA_4_viterbi',
+                 lenfilter=25, llrfilter=0.5,progressbar=True)
+```
+
+#### Inputs:
+
+1. hitsdir (-hd): path to the input hits file, should be the output from findhits with the regular fasta file as input. please use genbedrev/hmseekr_genbedrev for the reversed fasta file 
+2. outputdir (-o): path and name to the output bedfile, do not need to add .bed at the end
+3. lenfilter (-len): the minimum length of the hit, only keep hits that has a length > lenfilter, default is 25
+4. llrfilter (-llr): the minimum normalized kmerLLR score, only keep hits that has a normLLR > llrfilter, default is 0.5
+5. progressbar (-pb): whether to show the progress bar, default is True
+
+
+#### Output:
+A bedfile with the following columns: 'chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand' for all hits that passed the filtering. 'score' is the normLLR score, 'name' is 'fwd' as it should only be applied for the regular fasta file. For reversed fasta file, please use genbedrev/hmseekr_genbedrev
+
+
+### genbedrev: filter hits sequences and generate bedfiles for reversed fasta
+
+This function firstly filter the hits output from findhits/hmseekr_findhits with the reversed fasta file as input and then generate a bed file for the filtered hits. This function only applies to the output from findhits/hmseekr_findhits with the reversed fasta file as input for regular or forward fasta file, please use genbed/hmseekr_genbed. This function takes in the output from findhits/hmseekr_findhits with the reversed fasta file as input and filter the hits based on the hit length and normalized kmerLLR score. kmerLLR is the log likelihood ratio of of the probability that the set of k-mers y within a hit derived from the QUERY versus the NULL state. It is the sum of the log2(Q/N) ratio for each kmer within a hit. The normalized kmerLLR (normLLR) is the kmerLLR divided by the hit length. So the normLLR is the log2 of the Q/N ratio, i.e. if set normLLR > 0.5, the Q/N ratio is ~ 1.41. Then all the hits after the filtering will be converted to a bedfile.
+
+#### Console Example:
+generate bedfile for filtered hits from the hmseekr_findhits output file FLIPmm10expmap_queryA_4_viterbi.txt, which is generated using the reversed fasta file as input
+```
+hmseekr_genbedrev -hd '../FLIPmm10expmap_queryA_4_viterbi.txt' -o '../FLIPmm10expmap_queryA_4_viterbi' -len 25 -llr 0.5 -pb
+```
+
+#### Python Example:
+generate bedfile for filtered hits from the findhits output file FLIPmm10expmap_queryA_4_viterbi.txt, which is generated using the reversed fasta file as input
+```python
+from hmseekr.genbedrev import genbedrev
+
+testbed = genbedrev(hitsdir='../FLIPmm10expmap_queryA_4_viterbi.txt', 
+                    outputdir='../FLIPmm10expmap_queryA_4_viterbi',
+                    lenfilter=25, llrfilter=0.5,progressbar=True)
+```
+
+#### Inputs:
+
+1. hitsdir (-hd): path to the input hits file, should be the output from findhits with the reversed fasta file as input. please use genbed/hmseekr_genbed for the regular/forward fasta file 
+2. outputdir (-o): path and name to the output bedfile, do not need to add .bed at the end
+3. lenfilter (-len): the minimum length of the hit, only keep hits that has a length > lenfilter, default is 25
+4. llrfilter (-llr): the minimum normalized kmerLLR score, only keep hits that has a normLLR > llrfilter, default is 0.5
+5. progressbar (-pb): whether to show the progress bar, default is True
+
+
+#### Output:
+A bedfile with the following columns: 'chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand' for all hits that passed the filtering. 'score' is the normLLR score, 'name' is 'rev' as it should only be applied for the reversed fasta file. For regular/forward fasta file, please use genbed/hmseekr_genbed.
+
+<hr/>
+
+## Example pipeline to run on both forward and reverse sequences to improve hits quality
+Here we show an example of searching for similar regions of mouse Xist repeat A across mouse mm10 chromosome 16. Firstly we build and run the model for searching forward throughout chr16 and yield a bedfile after filtering for hit length and normalized LLR scores. Then we reverse the mouse Xist repeat A and the mm10 chromosome 16. We build and run the model on the reversed sequences and yield a bedfile in a similar way. In this way, we have the model searching for high similarity regions in both directions. If only one direction is run, all the hits are identified based on its previous sequences, which is how Hidden Markov Model works. When running in both directions, we can have hits identified based on preceding and succeeding sequences. By either merging or intersecting the bedfiles from both directions, we can improve the quality of the hits.
+
+### run forwardly
+
+query sequence: mXist_rA.fa
+background sequence: mm10_all_lncRNA.fa
+searchpool sequence: mm10_chr16.fa
+
+#### Console Example:
+
+count kmers for query and background sequences
+```
+hmseekr_kmers -fd '../fastaFiles/mXist_rA.fa' -k 4 -a ATCG -name repeatA_4 -dir '../counts/' 
+
+hmseekr_kmers -fd '../fastaFiles/mm10_all_lncRNA.fa' -k 4 -a ATCG -name lncRNA_4 -dir '../counts/' 
+```
+
+train the model
+```
+hmseekr_train -qd '../counts/repeatA_4.dict' -nd '../counts/lncRNA_4.dict' -k 4 -a ATCG -qT 0.9999 -nT 0.9999 -qPre repeatA -nPre lncRNA -dir '../markovModels/'
+```
+
+find potential hits across chr16
+```
+hmseekr_findhits -pool '../fastaFiles/mm10_chr16.fa' -m '../markovModels/repeatA_lncRNA/4/hmm.dict' -k 4 -name 'chr16_queryA' -dir '../' -a 'ATCG' -fa -pb
+```
+
+generate bedfiles after filtering: as this is the forward run, we use hmseekr_genbed
+
+```
+hmseekr_genbed -hd '../chr16_queryA_4_viterbi.txt' -o '../chr16_queryA_4_viterbi' -len 25 -llr 0.5 -pb
+```
+
+#### Python Example:
+
+```python
+from hmseekr.kmers import kmers
+from hmseekr.train import train
+from hmseekr.findhits import findhits
+from hmseekr.genbed import genbed
+
+# count kmers for query and background sequences
+qdict = kmers(fadir='../fastaFiles/mXist_rA.fa',kvec='4',
+              alphabet='ATCG',outputname='repeatA_4',
+              outputdir='../counts/')
+
+bkgdict = kmers(fadir='../fastaFiles/mm10_all_lncRNA.fa',kvec='4',
+                alphabet='ATCG',outputname='lncRNA_4',
+                outputdir='../counts/')
+
+# train the model
+fwdmodel = train(querydir='../counts/repeatA_4.dict', nulldir='../counts/lncRNA_4.dict',
+                 kvec='4', alphabet='ATCG', queryT=0.9999, nullT=0.9999,
+                 queryPrefix='repeatA', nullPrefix='lncRNA', outputdir='../markovModels/')
+
+# find potential hits across chr16
+fwdhits = findhits(searchpool='../fastaFiles/mm10_chr16.fa',
+                   modeldir='../markovModels/repeatA_lncRNA/4/hmm.dict',
+                   knum=4,outputname='chr16_queryA',outputdir='../',
+                   alphabet='ATCG',fasta=True,progressbar=True)
+
+# generate bedfiles after filtering: as this is the forward run, we use genbed
+fwdbed = genbed(hitsdir='../chr16_queryA_4_viterbi.txt', 
+                outputdir='../chr16_queryA_4_viterbi',
+                lenfilter=25, llrfilter=0.5,progressbar=True)
+
+```
+
+
+### run reversely
+
+query sequence: reversed mXist_rA.fa
+background sequence: reversed mm10_all_lncRNA.fa
+searchpool sequence: reversed mm10_chr16.fa
+
+#### Console Example:
+
+reverse query, background and searchpool sequences. Please use the hmseekr_fastarev to reverse sequences to ensure proper formats for later steps
+```
+hmseekr_fastarev -i '../fastaFiles/mXist_rA.fa' -o '../fastaFiles/mXist_rA_rev.fa'
+
+hmseekr_fastarev -i '../fastaFiles/mm10_all_lncRNA.fa' -o '../fastaFiles/mm10_all_lncRNA_rev.fa'
+
+hmseekr_fastarev -i '../fastaFiles/mm10_chr16.fa' -o '../fastaFiles/mm10_chr16_rev.fa'
+```
+
+count kmers for reversed query and background sequences
+```
+hmseekr_kmers -fd '../fastaFiles/mXist_rA_rev.fa' -k 4 -a ATCG -name repeatA_4_rev -dir '../counts/' 
+
+hmseekr_kmers -fd '../fastaFiles/mm10_all_lncRNA_rev.fa' -k 4 -a ATCG -name lncRNA_4_rev -dir '../counts/' 
+```
+
+train the model
+```
+hmseekr_train -qd '../counts/repeatA_4_rev.dict' -nd '../counts/lncRNA_4_rev.dict' -k 4 -a ATCG -qT 0.9999 -nT 0.9999 -qPre repeatA -nPre lncRNA_rev -dir '../markovModels/'
+```
+
+find potential hits reversely across chr16 
+```
+hmseekr_findhits -pool '../fastaFiles/mm10_chr16_rev.fa' -m '../markovModels/repeatA_lncRNA_rev/4/hmm.dict' -k 4 -name 'Rev_chr16_queryA' -dir '../' -a 'ATCG' -fa -pb
+```
+
+generate bedfiles after filtering: as this is the reverse run, we use hmseekr_genbedrev
+
+```
+hmseekr_genbedrev -hd '../Rev_chr16_queryA_4_viterbi.txt' -o '../Rev_chr16_queryA_4_viterbi' -len 25 -llr 0.5 -pb
+```
+
+#### Python Example:
+
+```python
+from hmseekr.fastarev import fastarev
+from hmseekr.kmers import kmers
+from hmseekr.train import train
+from hmseekr.findhits import findhits
+from hmseekr.genbedrev import genbedrev
+
+# reverse query, background and searchpool sequences
+# Please use the hmseekr_fastarev to reverse sequences to ensure proper formats for later steps
+fastarev(input_file_path='../fastaFiles/mXist_rA.fa',
+         output_file_path='../fastaFiles/mXist_rA_rev.fa')
+
+fastarev(input_file_path='../fastaFiles/mm10_all_lncRNA.fa',
+         output_file_path='../fastaFiles/mm10_all_lncRNA_rev.fa')
+
+fastarev(input_file_path='../fastaFiles/mm10_chr16.fa',
+         output_file_path='../fastaFiles/mm10_chr16_rev.fa')
+
+# count kmers for reversed query and background sequences
+revqdict = kmers(fadir='../fastaFiles/mXist_rA_rev.fa',kvec='4',
+                 alphabet='ATCG',outputname='repeatA_4_rev',
+                 outputdir='../counts/')
+
+revbkgdict = kmers(fadir='../fastaFiles/mm10_all_lncRNA_rev.fa',kvec='4',
+                   alphabet='ATCG',outputname='lncRNA_4_rev',
+                   outputdir='../counts/')
+
+# train the model
+revmodel = train(querydir='../counts/repeatA_4_rev.dict', nulldir='../counts/lncRNA_4_rev.dict',
+                 kvec='4', alphabet='ATCG', queryT=0.9999, nullT=0.9999,
+                 queryPrefix='repeatA', nullPrefix='lncRNA_rev', outputdir='../markovModels/')
+
+# find potential hits reversely across chr16
+revhits = findhits(searchpool='../fastaFiles/mm10_chr16_rev.fa',
+                   modeldir='../markovModels/repeatA_lncRNA_rev/4/hmm.dict',
+                   knum=4,outputname='Rev_chr16_queryA',outputdir='../',
+                   alphabet='ATCG',fasta=True,progressbar=True)
+
+# generate bedfiles after filtering: as this is the reverse run, we use genbedrev
+revbed = genbedrev(hitsdir='../Rev_chr16_queryA_4_viterbi.txt', 
+                   outputdir='../Rev_chr16_queryA_4_viterbi',
+                   lenfilter=25, llrfilter=0.5,progressbar=True)
+
+```
+
+
+### further analysis based on the bedfiles from both run
+
+Each bedfiles would have the score column (5th), which is the normalized LLR score. We can treat this score as the quaility of each hit: the higher the score, the more similar the hit to the query. Therefore, if needed, hits region inside the bedfiles can also be sorted based on the score column. Users then can decided to apply further filters such as only taking the top 100 hits. This step can be easily done in Excel, R or Python. Please choose the method that works best for you.
+
+
+For both forward and reverse run, the bedfiles have the correct start and end cooridnates. That is, although the reverse run searches the chr16 reversely, the hits region has been properly recognized and transformed to a bedfile with correct start and end position. These coordinates are not reversed. Therefore, we can use [bedtools](https://bedtools.readthedocs.io/en/latest/index.html) in a “command line” environment to either [merge](https://bedtools.readthedocs.io/en/latest/content/tools/merge.html) the hits or [intersect](https://bedtools.readthedocs.io/en/latest/content/tools/intersect.html) the hits. Please refer to the [bedtools](https://bedtools.readthedocs.io/en/latest/index.html) official website for installation guide.
+
+
+#### merge the bedfiles
+
+to merge the bedfiles, we firstly need to concatenate both bedfiles into one file
+```
+cat chr16_queryA_4_viterbi.bed Rev_chr16_queryA_4_viterbi.bed > Comb_chr16_queryA_4_viterbi.bed
+```
+
+before merging, it is always good to sort the bedfiles
+```
+sort -k1,1 -k2,2n Comb_chr16_queryA_4_viterbi.bed > Comb_chr16_queryA_4_viterbi_sorted.bed
+```
+
+merge the bedfiles. here we decide to take the mean score (5th column, normalized LLR) of the overlapping regions as the new score for the merged region. If this operation needs to be changed, please refer to the [merge](https://bedtools.readthedocs.io/en/latest/content/tools/merge.html) function website.
+
+```
+# load the module if working on HPC
+module load bedtools
+
+bedtools merge -i Comb_chr16_queryA_4_viterbi_sorted.bed -s -c 4,5,6 -o distinct,mean,distinct > chr16_queryA_4_viterbi_sorted_merged.bed
+```
+Users can choose to further filter the hits in the chr16_queryA_4_viterbi_sorted_merged.bed file based on the score column (5th), by either enforcing a threshold or order and choose the top 100 hits.
+
+
+#### intersect the bedfiles
+
+before intersecting, it is always good to sort the bedfiles
+```
+sort -k1,1 -k2,2n chr16_queryA_4_viterbi.bed > chr16_queryA_4_viterbi_sorted.bed
+
+sort -k1,1 -k2,2n Rev_chr16_queryA_4_viterbi.bed > Rev_chr16_queryA_4_viterbi_sorted.bed
+```
+
+intersect the bedfiles. Here we use -s to enforce the intersection on the same strand. The name and score for the intersected region will be inherited from the -a input. For example, -a has the entry: chr1 0 10 fwd 0.9 + and -b has entry: chr1 5 12 rev 0.2 +. The intersected region will be reported as: chr1 5 10 fwd 0.9 +. If this operation needs to be changed, please refer to the [intersect](https://bedtools.readthedocs.io/en/latest/content/tools/intersect.html) function website.
+
+```
+# load the module if working on HPC
+module load bedtools
+
+bedtools intersect -a chr16_queryA_4_viterbi_sorted.bed -b Rev_chr16_queryA_4_viterbi_sorted.bed -s > chr16_queryA_4_viterbi_intsct.bed
+```
+Users can choose to further filter the hits in the chr16_queryA_4_viterbi_sorted_intsct.bed file based on the score column (5th), by either enforcing a threshold or order and choose the top 100 hits.
+
+
 
 
 <hr/>
