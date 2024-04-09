@@ -3,10 +3,13 @@ import argparse
 
 
 
-from hmseekr import kmers
-from hmseekr import train
-from hmseekr import findhits
-from hmseekr import gridsearch
+from hmseekr.kmers import kmers
+from hmseekr.train import train
+from hmseekr.findhits import findhits
+from hmseekr.gridsearch import gridsearch
+from hmseekr.fastarev import fastarev
+from hmseekr.genbed import genbed
+from hmseekr.genbedrev import genbedrev
 
 from hmseekr.__version__ import __version__
 
@@ -124,6 +127,91 @@ Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
 """
 
 
+FASTAREV_DOC = """
+Description: 
+This function reverses a fasta file and save it to a new file
+'ATGC' will be reversed to 'CGTA'
+
+Details:
+this function takes in fasta file and reverse the sequence.
+if input fasta contains more than one sequence, each sequence will be reversed
+the headers will be kept the same, only the sequences will be reversed
+keeping the headers the same will allow the user to match the reversed sequences to the original sequences easily
+the output is a fasta file with the reversed sequences
+
+Example:
+reverse the sequence of mXist repeat A fasta file and save it to a new file while keeping the headers the same
+    $ hmseekr_fastarev -i '../fastaFiles/mXist_rA.fa' -o '../fastaFiles/mXist_rA_rev.fa'
+
+For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
+Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
+
+"""
+
+GENBED_DOC = """
+Description: 
+This function firstly filter the hits output from hmseekr_findhits
+and then generate a bed file for the filtered hits
+this function only applies to the output from hmseekr_findhits with the regular fasta file as input
+for reversed fasta file, please use hmseekr_genbedrev
+
+Details:
+this function takes in the output from hmseekr_findhits and filter the hits based on the hit length and normalized kmerLLR score
+kmerLLR is the log likelihood ratio of of the probability 
+that the set of k-mers y within a hit derived from the QUERY versus the NULL state
+it is the sum of the log2(Q/N) ratio for each kmer within a hit
+the normalized kmerLLR (normLLR) is the kmerLLR divided by the hit length
+so the normLLR is the log2 of the Q/N ratio, i.e. if set normLLR > 0.5, the Q/N ratio is ~ 1.41
+then all the hits after the filtering will be converted to a bedfile
+
+
+Example:
+generate bedfile for filtered hits from the hmseekr_findhits output file mm10expmap_queryA_4_viterbi.txt
+    $ hmseekr_genbed -hd '../mm10expmap_queryA_4_viterbi.txt' -o '../mm10expmap_queryA_4_viterbi' -len 25 -llr 0.5 -pb
+
+minimal code with all settings to default
+    $ hmseekr_genbed -hd '../mm10expmap_queryA_4_viterbi.txt' -o '../mm10expmap_queryA_4_viterbi' 
+
+For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
+Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
+
+"""
+
+
+GENBEDREV_DOC = """
+Description: 
+This function firstly filter the hits output from hmseekr_findhits with the reversed fasta file as input
+and then generate a bed file for the filtered hits
+this function only applies to the output from hmseekr_findhits with the reversed fasta file as input
+for regular or forward fasta file, please use hmseekr_genbed
+
+Details:
+this function takes in the output from hmseekr_findhits with the reversed fasta file as input
+and filter the hits based on the hit length and normalized kmerLLR score
+kmerLLR is the log likelihood ratio of of the probability 
+that the set of k-mers y within a hit derived from the QUERY versus the NULL state
+it is the sum of the log2(Q/N) ratio for each kmer within a hit
+the normalized kmerLLR (normLLR) is the kmerLLR divided by the hit length
+so the normLLR is the log2 of the Q/N ratio, i.e. if set normLLR > 0.5, the Q/N ratio is ~ 1.41
+then all the hits after the filtering will be converted to a bedfile
+
+
+Example:
+generate bedfile for filtered hits from the hmseekr_findhits output file FLIPmm10expmap_queryA_4_viterbi.txt 
+which is generated using the reversed fasta file as input
+    $ hmseekr_genbedrev -hd '../FLIPmm10expmap_queryA_4_viterbi.txt' -o '../FLIPmm10expmap_queryA_4_viterbi' -len 25 -llr 0.5 -pb
+
+minimal code with all settings to default
+    $ hmseekr_genbedrev -hd '../FLIPmm10expmap_queryA_4_viterbi.txt' -o '../FLIPmm10expmap_queryA_4_viterbi' 
+
+For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
+Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
+
+"""
+
+
+
+
 def _parse_args_or_exit(parser):
     if len(sys.argv) == 1:
         # this means no arguments given
@@ -145,7 +233,7 @@ def console_hmseekr_kmers():
     
     args = _parse_args_or_exit(parser)
 
-    kmers.kmers(
+    kmers(
         args.fadir,
         args.kvec,
         args.alphabet,
@@ -170,7 +258,7 @@ def console_hmseekr_train():
     
     args = _parse_args_or_exit(parser)
 
-    train.train(
+    train(
         args.querydir,
         args.nulldir,
         args.kvec,
@@ -198,7 +286,7 @@ def console_hmseekr_findhits():
 
     args = _parse_args_or_exit(parser)
 
-    findhits.findhits(
+    findhits(
         args.searchpool,
         args.modeldir,
         args.knum,
@@ -233,7 +321,7 @@ def console_hmseekr_gridsearch():
 
     args = _parse_args_or_exit(parser)
 
-    gridsearch.gridsearch(
+    gridsearch(
         args.queryfadir,
         args.nullfadir,
         args.searchpool,
@@ -251,6 +339,64 @@ def console_hmseekr_gridsearch():
         args.alphabet,
         args.progressbar
         )
+    
+
+def console_hmseekr_fastarev():
+    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    parser = argparse.ArgumentParser(usage=FASTAREV_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    
+    parser.add_argument("-i","--inputdir", type=str,help='Path to input fasta file', required=True)
+    parser.add_argument("-o","--outputdir",type=str,help="Path and name to the output fasta file", required=True)
+    
+    args = _parse_args_or_exit(parser)
+
+    fastarev(
+        args.inputdir,
+        args.outputdir
+        )
+    
+
+def console_hmseekr_genbed():
+    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    parser = argparse.ArgumentParser(usage=GENBED_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    
+    parser.add_argument("-hd","--hitsdir",type=str,help='path to the input hits file, should be the output from findhits with the regular fasta file as input', required=True)
+    parser.add_argument("-o","--outputdir",type=str,help='path and name to the output bedfile, do not need to add .bed at the end', required=True)
+    parser.add_argument("-len","--lenfilter",type=int,help='the minimum length of the hit, only keep hits that has a length > lenfilter',  default=25)
+    parser.add_argument("-llr","--llrfilter",type=float,help='the minimum normalized kmerLLR score, only keep hits that has a normLLR > llrfilter', default=0.5)
+    parser.add_argument("-pb","--progressbar",action='store_true',help='when called, progress bar will be shown; if omitted, no progress bar will be shown')
+
+    args = _parse_args_or_exit(parser)
+
+    genbed(
+        args.hitsdir,
+        args.outputdir,
+        args.lenfilter,
+        args.llrfilter,
+        args.progressbar
+        )
+
+
+def console_hmseekr_genbedrev():
+    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    parser = argparse.ArgumentParser(usage=GENBEDREV_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    
+    parser.add_argument("-hd","--hitsdir",type=str,help='path to the input hits file, should be the output from findhits with the reversed fasta file as input', required=True)
+    parser.add_argument("-o","--outputdir",type=str,help='path and name to the output bedfile, do not need to add .bed at the end', required=True)
+    parser.add_argument("-len","--lenfilter",type=int,help='the minimum length of the hit, only keep hits that has a length > lenfilter',  default=25)
+    parser.add_argument("-llr","--llrfilter",type=float,help='the minimum normalized kmerLLR score, only keep hits that has a normLLR > llrfilter', default=0.5)
+    parser.add_argument("-pb","--progressbar",action='store_true',help='when called, progress bar will be shown; if omitted, no progress bar will be shown')
+
+    args = _parse_args_or_exit(parser)
+
+    genbedrev(
+        args.hitsdir,
+        args.outputdir,
+        args.lenfilter,
+        args.llrfilter,
+        args.progressbar
+        )
+
     
 
 def _run_console_hmseekr_help(version):
