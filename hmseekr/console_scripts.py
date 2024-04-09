@@ -416,6 +416,9 @@ def _run_console_hmseekr_help(version):
         "hmseekr_train": TRAIN_DOC,
         "hmseekr_findhits": FINDHITS_DOC,
         "hmseekr_gridsearch": GRIDSEARCH_DOC,
+        "hmseekr_fastarev": FASTAREV_DOC,
+        "hmseekr_genbed": GENBED_DOC,
+        "hmseekr_genbedrev": GENBEDREV_DOC,
     }
     for c, d in cmds2doc.items():
         print(f"{'='*25}\n{c}\n{'='*25}\n{d}")
