@@ -487,17 +487,17 @@ For both forward and reverse run, the bedfiles have the correct start and end co
 
 #### merge the bedfiles
 
-to merge the bedfiles, we firstly need to concatenate both bedfiles into one file
+To merge the bedfiles, we firstly need to concatenate both bedfiles into one file
 ```
 cat chr16_queryA_4_viterbi.bed Rev_chr16_queryA_4_viterbi.bed > Comb_chr16_queryA_4_viterbi.bed
 ```
 
-before merging, it is always good to sort the bedfiles
+Before merging, it is always good to sort the bedfiles
 ```
 sort -k1,1 -k2,2n Comb_chr16_queryA_4_viterbi.bed > Comb_chr16_queryA_4_viterbi_sorted.bed
 ```
 
-merge the bedfiles. here we decide to take the mean score (5th column, normalized LLR) of the overlapping regions as the new score for the merged region. If this operation needs to be changed, please refer to the [merge](https://bedtools.readthedocs.io/en/latest/content/tools/merge.html) function website.
+Merge the bedfiles. here we decide to take the mean score (5th column, normalized LLR) of the overlapping regions as the new score for the merged region. If this operation needs to be changed, please refer to the [merge](https://bedtools.readthedocs.io/en/latest/content/tools/merge.html) function website.
 
 ```
 # load the module if working on HPC
@@ -510,14 +510,14 @@ Users can choose to further filter the hits in the chr16_queryA_4_viterbi_sorted
 
 #### intersect the bedfiles
 
-before intersecting, it is always good to sort the bedfiles
+Before intersecting, it is always good to sort the bedfiles
 ```
 sort -k1,1 -k2,2n chr16_queryA_4_viterbi.bed > chr16_queryA_4_viterbi_sorted.bed
 
 sort -k1,1 -k2,2n Rev_chr16_queryA_4_viterbi.bed > Rev_chr16_queryA_4_viterbi_sorted.bed
 ```
 
-intersect the bedfiles. Here we use -s to enforce the intersection on the same strand. The name and score for the intersected region will be inherited from the -a input. For example, -a has the entry: chr1 0 10 fwd 0.9 + and -b has entry: chr1 5 12 rev 0.2 +. The intersected region will be reported as: chr1 5 10 fwd 0.9 +. If this operation needs to be changed, please refer to the [intersect](https://bedtools.readthedocs.io/en/latest/content/tools/intersect.html) function website.
+Intersect the bedfiles. Here we use -s to enforce the intersection on the same strand. The name and score for the intersected region will be inherited from the -a input. For example, -a has the entry: chr1 0 10 fwd 0.9 + and -b has entry: chr1 5 12 rev 0.2 +. The intersected region will be reported as: chr1 5 10 fwd 0.9 +. If this operation needs to be changed, please refer to the [intersect](https://bedtools.readthedocs.io/en/latest/content/tools/intersect.html) function website.
 
 ```
 # load the module if working on HPC
@@ -525,7 +525,25 @@ module load bedtools
 
 bedtools intersect -a chr16_queryA_4_viterbi_sorted.bed -b Rev_chr16_queryA_4_viterbi_sorted.bed -s > chr16_queryA_4_viterbi_intsct.bed
 ```
+The -wb argument can be added to report the original -b feature in the same row with the intersected feature. In this way, the first 6 columns are for the intersected feature, with the 4th (name), 5th (score) same as the -a feature, and the following 6 columns report the original -b feature. Users can recalcualte the score (5th column) for the intersected region by considering scores from both -a and -b feature. 
+```
+# load the module if working on HPC
+module load bedtools
+
+bedtools intersect -a chr16_queryA_4_viterbi_sorted.bed -b Rev_chr16_queryA_4_viterbi_sorted.bed -s -wb > chr16_queryA_4_viterbi_intsct.bed
+```
 Users can choose to further filter the hits in the chr16_queryA_4_viterbi_sorted_intsct.bed file based on the score column (5th), by either enforcing a threshold or order and choose the top 100 hits.
+
+
+#### get fasta sequence from the bedfiles
+
+Using bedtools [getfasta](https://bedtools.readthedocs.io/en/latest/content/tools/getfasta.html) we can also easily extract the fasta sequence for each regions defined in the bedfile
+```
+# load the module if working on HPC
+module load bedtools
+
+bedtools getfasta -fi mm10_genome.fa -bed chr16_queryA_4_viterbi_intsct.bed -fo chr16_queryA_4.fa -s
+```
 
 
 
