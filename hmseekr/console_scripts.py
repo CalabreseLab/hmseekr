@@ -369,7 +369,7 @@ def console_hmseekr_findhits_condE():
 
     args = _parse_args_or_exit(parser)
 
-    findhits(
+    findhits_condE(
         args.searchpool,
         args.modeldir,
         args.knum,
@@ -396,7 +396,7 @@ def console_hmseekr_findhits_nol():
 
     args = _parse_args_or_exit(parser)
 
-    findhits(
+    findhits_nol(
         args.searchpool,
         args.modeldir,
         args.knum,
