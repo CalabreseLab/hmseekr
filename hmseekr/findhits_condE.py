@@ -3,6 +3,7 @@
 # This program use precalculated model (emission matrix, prepared transition matrix, pi and states) from train function
 # to find out HMM state path through sequences of interest
 # therefore return sequences that has high similarity to the query sequence -- hits sequneces
+# this function is different from the basic findhits function in that it calculates the emission probability of the next word given the current word
 
 ### Details:
 # this function takes in a fasta file which defines the region to search for potential hits (highly similar regions) to the query seq
@@ -10,6 +11,11 @@
 # along the searchpool fasta sequences, similarity scores to query seq will be calculated based on the model
 # hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment
 # kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment
+# difference from the basic findhits function is that this function calculate the emission probability of the next word given the current word
+# as the shift is by 1 nt, the next word has k-1 overlap with the current word
+# for example, if the current word is 'TAGC', the next possible words are 'AGCA', 'AGCT', 'AGCC', 'AGCG'
+# then the emission probability of the next word ('AGCA') given the current word as 'TAGC' is calculated as 
+# np.log2(emission probability of 'AGCA' in the original E) - np.log2(sum of emission probability of all four possible worlds in the original E)
 
 
 ### Input:
@@ -26,16 +32,15 @@
 # a dataframe containing information about the hits regions: highly similar regions to query seq based on the precalculated model within the input fasta file
 # information about the hits regions includes: the sequence header from the input fasta file, start and end location of the hit segment
 # kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment if fasta=True
-# kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q state minus the log likelihood of them being in the N state
 
 ### Example:
-# from hmseekr.findhits import findhits
+# from hmseekr.findhits_condE import findhits_condE
 
-# testhits = findhits(searchpool='../fastaFiles/pool.fa',
-#                     modeldir='../markovModels/hmm.dict',
-#                     knum=4,outputname='hits',outputdir='./',
-#                     alphabet='ATCG',fasta=True,
-#                     progressbar=True)
+# testhits = findhits_condE(searchpool='../fastaFiles/pool.fa',
+#                           modeldir='../markovModels/hmm.dict',
+#                           knum=4,outputname='hits',outputdir='./',
+#                           alphabet='ATCG',fasta=True,
+#                           progressbar=True)
 
 
 ########################################################################################################
@@ -128,14 +133,125 @@ from math import log
 import pandas as pd
 from operator import itemgetter
 from tqdm import tqdm
+import numpy as np
+
+
+'''
+Viterbi: Calculate the most likely sequence of hidden states given observed sequence, transition matrix, and emission matrix
+
+Inputs: O - list, observed sequence of k-mers
+        A - dictionary, transition matrices of hidden states
+        E - dictionary, emission matrices of hidden states
+        states - list, hidden states (+,-)
+        m: + to + transition probability
+        n: - to - transition probability
+        pi - Dictionary, initial probability of being in + or -
+        cE - dictionary of dictionaries, normalized probability of the next word given the current word
+Returns:    backTrack - list, sequence of hidden states
+
+'''
+def viterbi_new(O,A,E,states,pi,cE):
+
+    # Initialize list of dictionaries for the current step
+    # and ukprev, which tracks the state transitions that maximize the 'viterbi function'
+    uk=[{}]
+    ukprev = [{}]
+    N = len(O)
+    # calculate initial probabilities in each state given the first kmer
+    # use E[state][O[0]] to get the emission probability of the first kmer in each state
+    for state in states:
+        uk[0][state]=pi[state]+E[state][O[0]]  # uk[0]['+'] = np.log2(.5) +  E['+']['AAAA']
+        ukprev[0][state] = None # previous state does not exist, set to None
+    # Loop through observed sequence
+    # For each state, calculate the cumulative probability recursively
+    # Store the state transition that maximizes this probability in ukprev for each current state
+    # use cE to get the normalized probability of the current word given the previous word
+    for n in range(1,N):
+        uk.append({})
+        ukprev.append({})
+        for state in states:
+            prevSelState = states[0] # this is just an arbitrary choice to start checking at the start of the list
+            currMaxProb = A[prevSelState][state] + uk[n-1][prevSelState] # probability function
+            for pState in states[1:]: # now check the other states...
+                currProb = A[pState][state] + uk[n-1][pState]
+                if currProb > currMaxProb: # if larger then the first one we checked, we have a new winner, store and continue loop and repeat
+                    currMaxProb = currProb
+                    prevSelState = pState
+            # The emission probability is constant so add at the end rather than in the loop
+            # use cE to get the normalized probability of the current word given the previous word
+            max_prob = currMaxProb + cE[state][O[n-1]][O[n]]
+            # save the cumalitive probability for each state
+            uk[n][state] = max_prob
+            # save the previous state that maximized this probability above
+            ukprev[n][state] = prevSelState
+
+    z = max(uk[-1],key=uk[-n].get) # retrieve the state associated with largest log probability
+    prev = ukprev[-1][z] # get the state BEFORE "z" above that maximized z
+    backtrack = [z,prev] # start our backtrack with knowns
+    # Loop through BACKWARDS, getting the previous state that yielded the 'current' max state
+    for n in range(N-2,-1,-1):
+        backtrack.append(ukprev[n+1][prev]) # n+1 is the "current" state as we're going backwards, ukprev[n+1][prev] returns the state that maximized
+        prev = ukprev[n+1][prev]
+    backtrack = backtrack[::-1] # reverse the order
+    return backtrack
+
+
+''' LLR
+Return log-likelihood ratio between two models in HMM for + k-mers
+Input: sequnce of hits, value of k, k-mer frequencies in HMM emmission matrix and conditioned emmission matrix
+Output: Array of LLRs for each hit
+
+hits = seqHits: ['GGCCCGGTGTGGTCGGCCTCATTTTGGATTACTTCGGTGGGCTTCTCCTCGG...', 'TCCGTGTGGATCGTTTCAGCACGGATC......'......]
+'''
+def LLR_new(hits,k,E,cE):
+    arr = np.zeros(len(hits))
+    for i,hit in enumerate(hits):
+        LLRPos,LLRNeg=0,0
+        # calculate the first kmer based on E
+        kmer=hit[0:k]
+        LLRPos += E['+'][kmer]
+        LLRNeg += E['-'][kmer]
+        # calculate the rest of the kmers based on cE
+        for j in range(1,len(hit)-k+1):
+            prevkmer=hit[j-1:j-1+k]
+            kmer=hit[j:j+k]
+            LLRPos += cE['+'][prevkmer][kmer]
+            LLRNeg += cE['-'][prevkmer][kmer]
+        llr = LLRPos-LLRNeg
+        arr[i] = llr
+    return arr
+
+
+'''
+Combine all the data to create a dataframe
+E: emission matrix
+seqHits: ['GGCCCGGTGTGGTCGGCCTCATTTTGGATTACTTCGGTGGGCTTCTCCTCGG...', 'TCCGTGTGGATCGTTTCAGCACGGATC......'......]
+'''
+
+def hitOutput_new(seqHits,starts,ends,k,E,tHead,cE):
+    info = list(zip(seqHits,starts,ends)) # example [('GGCCCGGTGTGGTCGGCCTCATTTTGGAT.......', 88, 177),......]
+    dataDict = dict(zip(list(range(len(seqHits))),info))
+    df = pd.DataFrame.from_dict(dataDict,orient='index')
+    #calculate log-likelihood ratio of k-mers in the + model vs - model
+    df['kmerLLR'] = LLR_new(seqHits,k,E,cE)
+    df['seqName'] = tHead
+    df.columns = ['Sequence','Start','End','kmerLLR','seqName']
+    df.sort_values(by='kmerLLR',inplace=True,ascending=False)
+    df.reset_index(inplace=True)
+    fa = df['Sequence']
+    df = df[['Start','End','kmerLLR','seqName','Sequence']]
+
+    return df
 
 
 
-def hmmCalc(tHead,tSeq,hmm,k):
+
+def hmmCalc_new(tHead,tSeq,hmm,k,alphabet):
     #tHead,tSeq = data
     O,oIdx,nBP = corefunctions.kmersWithAmbigIndex(tSeq,k)
     A,E,states,pi= hmm['A'],hmm['E'],hmm['states'],hmm['pi']
-    bTrack = corefunctions.viterbi(O,A,E,states,pi)
+    cE = condition_E(E,alphabet)
+    bTrack = viterbi_new(O,A,E,states,pi,cE)
     #Zip the indices of unambig k-mers with their viterbi derived HMM state labels
     coordBTrack = list(zip(oIdx,bTrack)) # [(1,'-'),(2,'+',...(n,'+'))]
     mergedTrack = coordBTrack + nBP # add back in ambig locations
@@ -146,7 +262,7 @@ def hmmCalc(tHead,tSeq,hmm,k):
     # Return sequences of HMM hits, and their start and end locations in the original sequence
     seqHits,starts,ends = corefunctions.formatHits(groupedHits,k,tSeq)
     if (seqHits):
-        df = corefunctions.hitOutput(seqHits,starts,ends,k,E,tHead,tSeq)
+        df = hitOutput_new(seqHits,starts,ends,k,E,tHead,cE)
         return tHead,df
     # Alternative output (transcript by transcript)
 
@@ -154,10 +270,39 @@ def hmmCalc(tHead,tSeq,hmm,k):
         return tHead,None
 
 
+def condition_E(E,alphabet):
+    # as the shift is by 1 nt, the next word has k-1 overlap with the current word
+    # so the next word (AGC(ATGC)) probability is dependent on the current word (TAGC)
+    # generate a dictionary of a dictionary to store the normailized probability of the next word given the current word
+    # E['+']['TAGC'] = {'AGCA':0.25,'AGCT':0.25,'AGCC':0.25,'AGCG':0.25}
+
+    # initialize the dictionary
+    cE = {state: {kmer: {} for kmer in E[state].keys()} for state in E.keys()}
+
+    for state in E.keys():
+        for kmer in E[state].keys():
+            # get the last k-1 nt of the kmer
+            # this is the overlapping part between the current kmer and the next kmer
+            prefix = kmer[1:]
+            # generate all possible next kmers based on alphabet
+            # for example, if prefix is ATC and alphabet is ATCG, then the next kmers are ATCA,ATCC,ATCG,ATCT
+            next_kmers = [prefix + suffix for suffix in alphabet]
+            # get the sum of the probability of the next kmers
+            # convert the probability from log2 back for summing up
+            # then convert back to log2
+            sum_prob = np.log2(sum([2**E[state][kmer] for kmer in next_kmers]))
+
+            # normalize the probability of the next kmers as np.log2(prob)-np.log2(sum_prob)
+            # adding the normalized probability to the dictionary
+            for next_kmer in next_kmers:
+                cE[state][kmer][next_kmer] = E[state][next_kmer] - sum_prob
+
+    return cE
 
 
 
-def findhits(searchpool,modeldir,knum,outputname='hits',outputdir='./',alphabet='ATCG',fasta=True,progressbar=True):
+
+def findhits_condE(searchpool,modeldir,knum,outputname='hits',outputdir='./',alphabet='ATCG',fasta=True,progressbar=True):
 
     #Loop over values of k
     alphabet = alphabet.upper()
@@ -192,7 +337,7 @@ def findhits(searchpool,modeldir,knum,outputname='hits',outputdir='./',alphabet=
     # Loop through data_pairs with a progress bar
     for header, seq in iterable:
         # Call hmmCalc and get returned header and value
-        theader, value = hmmCalc(header, seq, hmm, k)
+        theader, value = hmmCalc_new(header, seq, hmm, k, alphabet)
         
         # Assign the value to the corresponding header in your dictionary
         dataDict[theader] = value
