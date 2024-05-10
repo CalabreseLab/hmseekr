@@ -10,6 +10,7 @@
 # along the searchpool fasta sequences, similarity scores to query seq will be calculated based on the model
 # hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment
 # kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment
+# kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q state minus the log likelihood of them being in the N state
 
 
 ### Input:
@@ -26,7 +27,6 @@
 # a dataframe containing information about the hits regions: highly similar regions to query seq based on the precalculated model within the input fasta file
 # information about the hits regions includes: the sequence header from the input fasta file, start and end location of the hit segment
 # kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment if fasta=True
-# kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q state minus the log likelihood of them being in the N state
 
 ### Example:
 # from hmseekr.findhits import findhits

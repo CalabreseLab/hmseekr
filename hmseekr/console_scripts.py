@@ -82,6 +82,7 @@ also takes in the precalculated model (hmseekr_train function)
 along the searchpool fasta sequences, similarity scores to query seq will be calculated based on the model
 hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment
 kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment
+kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q state minus the log likelihood of them being in the N state
 
 
 Example:
@@ -101,29 +102,18 @@ Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
 
 FINDHITS_CONDE_DOC = """
 Description: 
-This program use precalculated model (emission matrix, prepared transition matrix, pi and states) from train function
-to find out HMM state path through sequences of interest
-therefore return sequences that has high similarity to the query sequence -- hits sequneces
 this function is different from the basic findhits function in that it calculates the emission probability of the next word given the current word
 
 Details:
-this function takes in a fasta file which defines the region to search for potential hits (highly similar regions) to the query seq
-also takes in the precalculated model (hmseekr_train function)
-along the searchpool fasta sequences, similarity scores to query seq will be calculated based on the model
-hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment
-kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment
-difference from the basic findhits function is that this function calculate the emission probability of the next word given the current word
-as the shift is by 1 nt, the next word has k-1 overlap with the current word
+this is a variant of findhits/hmseekr_findhits function
+in findhits, as the shift is by 1 nt, the next word has k-1 overlap with the current word
 for example, if the current word is 'TAGC', the next possible words are 'AGCA', 'AGCT', 'AGCC', 'AGCG'
 then the emission probability of the next word ('AGCA') given the current word as 'TAGC' is calculated as 
 np.log2(emission probability of 'AGCA' in the original E) - np.log2(sum of emission probability of all four possible worlds in the original E)
 
 
 Example:
-use the previously trained model (hmm.dict by hmseekr_train function) to search for highly similar regions to query seq (repeatA)
-within the pool.fa files (area of interest region to find sequences similar to query, could be all lncRNAs or just chromosome 6) 
-with kmer size 4 and save the hit sequences while showing progress bar
-this example uses the conditioned emission probability of the next word given the current word
+same example as hmseekr_findhits but uses the conditioned emission probability of the next word given the current word
     $ hmseekr_findhits_condE -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -name 'hits' -dir './models/'  -a 'ATCG' -fa -pb
 
 minimal code with all settings to default
@@ -137,20 +127,12 @@ Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
 
 FINDHITS_NOL_DOC = """
 Description: 
-This program use precalculated model (emission matrix, prepared transition matrix, pi and states) from train function
-to find out HMM state path through sequences of interest
-therefore return sequences that has high similarity to the query sequence -- hits sequneces
 this function is different from the basic findhits in that it uses non-overlapping kmers and shifts the sequence by 1nt each time until the kmer size is reached
 this reduces the kmer dependency of overlapping kmers
 
 
 Details:
-this function takes in a fasta file which defines the region to search for potential hits (highly similar regions) to the query seq
-also takes in the precalculated model (hmseekr_train function)
-along the searchpool fasta sequences, similarity scores to query seq will be calculated based on the model
-hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment
-kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment
-different from the basic findhits, this function scan along the sequences with non-overlapping kmers
+this is a variant of findhits/hmseekr_findhits function
 if sequence is 'ATGCTTTTGCGC' the kmers would be 'ATGC','TTTT','GCGC'
 then it chops off 1nt from the start of each sequence in the searchpool and re-scan with non-overlapping kmers
 so the sequence would be 'TGCTTTTGCGC' and the kmers would be 'TGCT','TTTG'
@@ -162,10 +144,7 @@ the outcome txt files can be further process to find the best hit regions: for e
 
 
 Example:
-use the previously trained model (hmm.dict by hmseekr_train function) to search for highly similar regions to query seq (repeatA)
-within the pool.fa files (area of interest region to find sequences similar to query, could be all lncRNAs or just chromosome 6) 
-with kmer size 4 and save the hit sequences while showing progress bar
-this example uses the non-overlapping kmers 
+same example as hmseekr_findhits but uses the non-overlapping kmers 
     $ hmseekr_findhits_nol -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -name 'hits' -dir './models/'  -a 'ATCG' -fa -pb
 
 minimal code with all settings to default
