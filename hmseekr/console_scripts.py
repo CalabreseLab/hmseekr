@@ -84,7 +84,6 @@ hits segments (highly similar regions) would be reported along with the sequence
 kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment
 kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q state minus the log likelihood of them being in the N state
 
-
 Example:
 use the previously trained model (hmm.dict by hmseekr_train function) to search for highly similar regions to query seq (repeatA)
 within the pool.fa files (area of interest region to find sequences similar to query, could be all lncRNAs or just chromosome 6) 
@@ -111,7 +110,6 @@ for example, if the current word is 'TAGC', the next possible words are 'AGCA', 
 then the emission probability of the next word ('AGCA') given the current word as 'TAGC' is calculated as 
 np.log2(emission probability of 'AGCA' in the original E) - np.log2(sum of emission probability of all four possible worlds in the original E)
 
-
 Example:
 same example as hmseekr_findhits but uses the conditioned emission probability of the next word given the current word
     $ hmseekr_findhits_condE -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -name 'hits' -dir './models/'  -a 'ATCG' -fa -pb
@@ -130,7 +128,6 @@ Description:
 this function is different from the basic findhits in that it uses non-overlapping kmers and shifts the sequence by 1nt each time until the kmer size is reached
 this reduces the kmer dependency of overlapping kmers
 
-
 Details:
 this is a variant of findhits/hmseekr_findhits function
 if sequence is 'ATGCTTTTGCGC' the kmers would be 'ATGC','TTTT','GCGC'
@@ -141,7 +138,6 @@ this is done until the kmer size is reached
 in this way, it generates k result txt files each starts at different position of the sequence with non-overlapping kmers
 this function reduces the kmer dependency of overlapping kmers in findhits, but also considered the different combinations of kmers at different start positions
 the outcome txt files can be further process to find the best hit regions: for example, only use the regions that are hits in all k result txt files
-
 
 Example:
 same example as hmseekr_findhits but uses the non-overlapping kmers 
