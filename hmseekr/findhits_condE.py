@@ -136,6 +136,17 @@ from tqdm import tqdm
 import numpy as np
 
 
+def find_new_starts(vector):
+
+    starts = []  # don't need the first elemment as in viterbi_new it is already taken care of
+
+    for i in range(1, len(vector)):
+        # If current element is not consecutive to the previous one, it's the start of a new sequence
+        if vector[i] != vector[i - 1] + 1:
+            starts.append(i)
+
+    return starts
+
 '''
 Viterbi: Calculate the most likely sequence of hidden states given observed sequence, transition matrix, and emission matrix
 
@@ -150,13 +161,19 @@ Inputs: O - list, observed sequence of k-mers
 Returns:    backTrack - list, sequence of hidden states
 
 '''
-def viterbi_new(O,A,E,states,pi,cE):
+def viterbi_new(O,A,E,states,pi,cE,oIdx):
 
     # Initialize list of dictionaries for the current step
     # and ukprev, which tracks the state transitions that maximize the 'viterbi function'
     uk=[{}]
     ukprev = [{}]
     N = len(O)
+    # find new starts in the seq that is the start after N
+    # as these position won't be dependent on the previous position
+    # we need to use the original E to calculate these positions
+    # need to return the position of the new starts in O
+    new_starts = find_new_starts(oIdx)
+
     # calculate initial probabilities in each state given the first kmer
     # use E[state][O[0]] to get the emission probability of the first kmer in each state
     for state in states:
@@ -178,8 +195,12 @@ def viterbi_new(O,A,E,states,pi,cE):
                     currMaxProb = currProb
                     prevSelState = pState
             # The emission probability is constant so add at the end rather than in the loop
-            # use cE to get the normalized probability of the current word given the previous word
-            max_prob = currMaxProb + cE[state][O[n-1]][O[n]]
+            # use cE to get the normalized probability of the current word given the previous word if the position is not a new start
+            # if it is a new start then calculate using the original E
+            if n in new_starts:
+                max_prob = currMaxProb + E[state][O[n]]
+            else:
+                max_prob = currMaxProb + cE[state][O[n-1]][O[n]]
             # save the cumalitive probability for each state
             uk[n][state] = max_prob
             # save the previous state that maximized this probability above
@@ -251,7 +272,7 @@ def hmmCalc_new(tHead,tSeq,hmm,k,alphabet):
     O,oIdx,nBP = corefunctions.kmersWithAmbigIndex(tSeq,k)
     A,E,states,pi= hmm['A'],hmm['E'],hmm['states'],hmm['pi']
     cE = condition_E(E,alphabet)
-    bTrack = viterbi_new(O,A,E,states,pi,cE)
+    bTrack = viterbi_new(O,A,E,states,pi,cE,oIdx)
     #Zip the indices of unambig k-mers with their viterbi derived HMM state labels
     coordBTrack = list(zip(oIdx,bTrack)) # [(1,'-'),(2,'+',...(n,'+'))]
     mergedTrack = coordBTrack + nBP # add back in ambig locations
