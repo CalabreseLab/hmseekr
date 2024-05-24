@@ -104,10 +104,10 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
         from hmseekr.findhits import findhits as findhits_cur
     elif func == 'findhits_condE':
         from hmseekr import findhits_condE
-        from hmseekr.findhits import findhits_condE as findhits_cur
+        from hmseekr.findhits_condE import findhits_condE as findhits_cur
     elif func == 'findhits_nol':
         from hmseekr import findhits_nol
-        from hmseekr.findhits import findhits_nol as findhits_cur
+        from hmseekr.findhits_nol import findhits_nol as findhits_cur
     else:
         print('Please specify a valid function for finding hits')
         print('Options include: findhits, findhits_condE, findhits_nol')
