@@ -5,9 +5,9 @@ import argparse
 
 from hmseekr.kmers import kmers
 from hmseekr.train import train
-from hmseekr.findhits import findhits
-from hmseekr.findhits_condE import findhits_condE
-from hmseekr.findhits_nol import findhits_nol
+from hmseekr import findhits
+from hmseekr import findhits_condE
+from hmseekr import findhits_nol
 from hmseekr.gridsearch import gridsearch
 from hmseekr.fastarev import fastarev
 from hmseekr.genbed import genbed
@@ -169,12 +169,12 @@ if query fasta contains more than one sequence all the sequences in query fasta 
 for calculating kmer count files for hmseekr (hmseekr.kmers) and for calculating seekr.pearson 
 this function requires the seekr package to be installed
 as there are iterations of train and findhits functions, which could take long time, it is recommended to run this function on a high performance computing cluster
-
+variants of findhits functions can be specified to run
 
 Example:
 perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99 with step of 0.01 with lengthfilter set to 25
-which only keep the hit sequences with length greater than 25 for stats calculation
-    $ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -qTmin 0.9 -qTmax 0.99 -qTstep 0.01 -nTmin 0.9 -nTmax 0.99 -nTstep 0.01 -lf 25 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
+which only keep the hit sequences with length greater than 25 for stats calculation. the regular findhits function is used
+    $ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -qTmin 0.9 -qTmax 0.99 -qTstep 0.01 -nTmin 0.9 -nTmax 0.99 -nTstep 0.01 -fc 'findhits' -lf 25 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
 
 
 For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
@@ -342,7 +342,7 @@ def console_hmseekr_findhits():
 
     args = _parse_args_or_exit(parser)
 
-    findhits(
+    findhits.findhits(
         args.searchpool,
         args.modeldir,
         args.knum,
@@ -369,7 +369,7 @@ def console_hmseekr_findhits_condE():
 
     args = _parse_args_or_exit(parser)
 
-    findhits_condE(
+    findhits_condE.findhits_condE(
         args.searchpool,
         args.modeldir,
         args.knum,
@@ -396,7 +396,7 @@ def console_hmseekr_findhits_nol():
 
     args = _parse_args_or_exit(parser)
 
-    findhits_nol(
+    findhits_nol.findhits_nol(
         args.searchpool,
         args.modeldir,
         args.knum,
@@ -424,7 +424,8 @@ def console_hmseekr_gridsearch():
     parser.add_argument("-nTmin","--nullTmin",type=float,help='minimal value of probability of null to null transition to be tested, must be between 0 and 1', required=True)  
     parser.add_argument("-nTmax","--nullTmax",type=float,help='maximal value of probability of null to null transition to be tested, must be between 0 and 1', required=True)
     parser.add_argument("-nTstep","--nullTstep",type=float,help='step width of probability of null to null transition to be tested', required=True) 
-    parser.add_argument("-lf","--lengthfilter",type=int,help='only keep hits sequences that have length > lengthfilter for calculating stats. must be one single integer', required=True)
+    parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits, findhits_condE and findhits_nol', default='findhits')
+    parser.add_argument("-lf","--lengthfilter",type=int,help='only keep hits sequences that have length > lengthfilter for calculating stats. must be one single integer', default=25)
     parser.add_argument("-name","--outputname",type=str,help='File name for output dataframe', default='gridsearch_results')
     parser.add_argument("-dir","--outputdir",type=str,help='Directory to save output dataframe and intermediate files',default='./gridsearch/')
     parser.add_argument("-a","--alphabet",type=str,help='String, Alphabet to generate k-mers (e.g. ATCG)',default='ATCG')
@@ -444,6 +445,7 @@ def console_hmseekr_gridsearch():
         args.nullTmin,
         args.nullTmax,
         args.nullTstep,
+        args.func,
         args.lengthfilter,
         args.outputname,
         args.outputdir,

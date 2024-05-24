@@ -15,6 +15,7 @@
 # for calculating kmer count files for hmseekr (hmseekr.kmers) and for calculating seekr.pearson 
 # this function requires the seekr package to be installed
 # as there are iterations of train and findhits functions, which could take long time, it is recommended to run this function on a high performance computing cluster
+# variants of findhits functions can be specified to run
 
 
 ### Input:
@@ -32,6 +33,7 @@
 # nullTmin: minimal number of probability of null to null transition, this number should be greater than 0 and it is included in the iteration
 # nullTmax: max number of probability of null to null transition, this number should be less than 1 and it is included in the iteration
 # nullTstep: step width between nullTmin and nullTmax, numbers are limited to 6 decimal places
+# func: the function to use for finding hits, default='findhits', other options include 'findhits_condE' or 'findhits_nol'
 # lengthfilter: only keep hits sequences that have length > lengthfilter for calculating stats in the output, default=25. if no filter is needed, set to 0
 # outputname: File name for output dataframe, default='gridsearch_results'
 # outputdir: path of output directory to save outputs and intermediate files, default is a subfolder called gridsearch under current directory
@@ -54,7 +56,7 @@
 #                         bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',knum=4, 
 #                         queryTmin=0.92, queryTmax=0.99, queryTstep=0.01,
 #                         nullTmin=0.9, nullTmax=0.99, nullTstep=0.01,
-#                         lengthfilter=25,
+#                         func='findhits',lengthfilter=25,
 #                         outputname='gridsearch_results', 
 #                         outputdir='/Users/shuang/gridsearch/', 
 #                         alphabet='ATCG', progressbar=True)
@@ -67,7 +69,6 @@ from seekr.pearson import pearson as seekrPearson
 from seekr.fasta_reader import Reader as seekrReader
 
 from hmseekr import train
-from hmseekr import findhits
 from hmseekr import kmers
 
 import os
@@ -78,7 +79,8 @@ from tqdm import tqdm
 
 def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
                queryTmin, queryTmax, queryTstep, nullTmin, nullTmax, nullTstep,
-               lengthfilter=25, outputname='gridsearch_results',outputdir='./gridsearch/',  
+               func='findhits', lengthfilter=25, 
+               outputname='gridsearch_results',outputdir='./gridsearch/',  
                alphabet='ATCG', progressbar=True):
 
     # Check if specified directory exists
@@ -96,7 +98,22 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
             print('Please specify a directory that is empty or does not exist for outputdir') 
             return None
 
-    
+    # load in corresponding findhits function
+    if func == 'findhits':
+        from hmseekr import findhits
+        from hmseekr.findhits import findhits as findhits_cur
+    elif func == 'findhits_condE':
+        from hmseekr import findhits_condE
+        from hmseekr.findhits import findhits_condE as findhits_cur
+    elif func == 'findhits_nol':
+        from hmseekr import findhits_nol
+        from hmseekr.findhits import findhits_nol as findhits_cur
+    else:
+        print('Please specify a valid function for finding hits')
+        print('Options include: findhits, findhits_condE, findhits_nol')
+        return None
+
+
     # based on input generate a list of queryT and nullT
     # include the min and max values in the list
     queryT_list= [round(i, 6) for i in list(np.arange(queryTmin, queryTmax+queryTstep, queryTstep))]
@@ -197,7 +214,7 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
             if not os.path.exists(f'{newDir}hits/'):
                 os.mkdir(f'{newDir}hits/')
             # find the hits
-            hits = findhits.findhits(searchpool=searchpool, modeldir=modeldir, knum=knum, outputname=f'hits_q{qT}_n{nT}', outputdir=hitsdir, alphabet=alphabet, fasta=True, progressbar=False)
+            hits = findhits_cur(searchpool=searchpool, modeldir=modeldir, knum=knum, outputname=f'hits_q{qT}_n{nT}', outputdir=hitsdir, alphabet=alphabet, fasta=True, progressbar=False)
             # only keep the rows in hits if Length col is greater than 25nt
             hits = hits[hits['Length']>lengthfilter]
             lenvec = np.array(hits['Length'])
