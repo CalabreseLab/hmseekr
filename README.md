@@ -267,7 +267,7 @@ testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa',
                         bkgfadir='./fastaFiles/bkg.fa',knum=4, 
                         queryTmin=0.9, queryTmax=0.99, queryTstep=0.01,
                         nullTmin=0.9, nullTmax=0.99, nullTstep=0.01,
-                        func='findhits', lengthfilter=25,
+                        func='findhits_condE', lengthfilter=25,
                         outputname='gridsearch_results', 
                         outputdir='./gridsearch/', 
                         alphabet='ATCG', progressbar=True)
@@ -286,7 +286,7 @@ testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa',
 9. nullTmin (-nTmin): minimal number of probability of null to null transition, this number should be greater than 0 and it is included in the iteration
 10. nullTmax (-nTmax): max number of probability of null to null transition, this number should be less than 1 and it is included in the iteration
 11. nullTstep (-nTstep): step width between nullTmin and nullTmax, numbers are limited to 6 decimal places
-12. func (-fc): the function to use for finding hits, default='findhits', other options include 'findhits_condE' or 'findhits_nol'
+12. func (-fc): the function to use for finding hits, default='findhits_condE', other options include 'findhits'
 13. lengthfilter (-lf): only keep hits sequences that have length > lengthfilter for calculating stats in the output, default=25. if no filter is needed, set to 0
 14. outputname (-name): File name for output dataframe, default='gridsearch_results'
 15. outputdir (-dir): path of output directory to save outputs and intermediate files, default is a subfolder called gridsearch under current directory. The intermediate fasta seq files, count files, trained models and hits files are automatically saved under the outputdir into subfolders: seqs, counts, models, hits, where qT and nT are included in the file names as the iterated transition probabilities
@@ -428,6 +428,59 @@ addpvals = hitseekr(hitsdir='./mm10_queryA_4_viterbi.txt',
 #### Output:
 a dataframe with seekr p value added to the findhits dataframe
 outputname is automatically generated as the input findhits filename with '\_seekr' appended to it
+
+
+### seqstosummary: search and quantify multiple features
+
+This function is designed to get the overall likeliness of each search pool sequence to the query sequences. The function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file (for hmseekr) and a background fasta file (for seekr). Here the transition probability dataframe must have the same rows as the query fasta file. The columns should be '\[qT,nT\]' where qT is the probability of query to query transition, nT is the probability of null to null transition The transition prbability for each query sequence can be different and can be optimized by the gridsearch function. Users can also choose to set the transition probability to be the same for all query sequences. The function will run the kmers, train, findhits and hitseekr functions for each query sequence. Then the results can be filtered by the length of the hit regions, the normalized kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value. Finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence, and also the sum of length normalized kmerLLR (normLLR) for all the counts of a search pool sequence with each the query sequences. Each row of the output dataframe contains a sequence in the search pool fasta, and has four columns: seqName, feature, counts, sum_normLLR: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; sum_normLLR is the sum of length normalized kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; the output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
+
+
+
+#### Console Example:
+search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E
+
+```
+hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -lenf 25 -llrf 0 -pf 1 -name 'seqstosummary_results' -dir './seqstosummary/' -a 'ATCG' -pb
+```
+
+#### Python Example:
+search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E
+
+```python
+from hmseekr.seqstosummary import seqstosummary
+
+testsum = seqstosummary(queryfadir='./fastaFiles/mXist_repeats.fa', 
+                        transdf='./trans.csv',
+                        nullfadir='./fastaFiles/expressed_lncRNA.fa', 
+                        searchpool='./fastaFiles/chr16.fa',
+                        bkgfadir='./all_lncRNA.fa',
+                        knum=4, func='findhits_condE',
+                        lenfilter=25,llrfilter=0, pfilter=1,
+                        outputname='seqstosummary_results', 
+                        outputdir='/Users/shuang/seqstosummary/', 
+                        alphabet='ATCG', progressbar=True)
+```
+
+#### Inputs:
+
+1. queryfadir (-qf): Path to the fasta file of query seqs. Different from other functions such as kmers and gridsearch, if query fasta contains more than one sequence, each sequence will be treated as a separate query sequence
+2. transdf (-td): Path to the transition probability dataframe in csv format, the dataframe should have the same rows as the query fasta file, and the columns should be '\[qT,nT\]' where qT is the probability of query to query transition, nT is the probability of null to null transition. Please do not include the index column in the csv file.
+3. nullfadir (-nf): Path to the fasta file of null model sequences (e.g. transcriptome, genome, etc.)
+4. searchpool (-pool): Path to fasta file which defines the region to search for potential hits (highly similar regions) based on the precalculated model (train function)
+5. bkgfadir (-bkgf): fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function. This fasta file can be different from the nullfadir fasta file
+6. knum (-k): a single integer value for kmer number
+7. func (-fc): the function to use for finding hits, default='findhits_condE', other options include 'findhits'
+8. lenfilter (-lenf): only keep hits sequences that have length > lenfilter for calculating stats in the output, default=25. if no filter is needed, set to 0
+9. llrfilter (-llrf): only keep hits sequences that have length normalized kmerLLR > llrfilter for calculating stats in the output, default=0. if no filter is needed, set to 0. kmerLLR is the log likelihood ratio of of the probability that the set of k-mers y within a hit derived from the QUERY versus the NULL state. It is the sum of the log2(Q/N) ratio for each kmer within a hit. The normalized kmerLLR (normLLR) is the kmerLLR divided by the hit length. So the normLLR is the log2 of the Q/N ratio, i.e. if set normLLR > 0.5, the Q/N ratio is ~ 1.41
+10. pfilter (-pf): only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1. if no filter is needed, set to 1
+11. outputname (-name): File name for output dataframe, default='seqstosummary_results'
+12. outputdir (-dir): path of output directory to save outputs and intermediate files, default is a subfolder called seqstosummary under current directory. The intermediate fasta seq files, count files, trained models and hits files are automatically saved under the outputdir into subfolders: seqs, counts, models, hits, where qT and nT are included in the file names
+13. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
+14. progressbar (-pb): whether to show progress bar, default=True: show progress bar
+
+#### Output:
+a dataframe where each row contains a sequence in the search pool fasta file, and four columns: seqName, feature, counts, sum_normLLR: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; sum_normLLR is the sum of length normalized kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
+
 
 
 <hr/>

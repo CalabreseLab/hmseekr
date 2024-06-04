@@ -70,6 +70,7 @@ setup(
             "hmseekr_genbed = hmseekr.console_scripts:console_hmseekr_genbed",
             "hmseekr_genbedrev = hmseekr.console_scripts:console_hmseekr_genbedrev",
             "hmseekr_hitseekr = hmseekr.console_scripts:console_hmseekr_hitseekr",
+            "hmseekr_seqstosummary = hmseekr.console_scripts:console_hmseekr_seqstosummary",
             "hmseekr = hmseekr.console_scripts:console_hmseekr_help"
         ]
     },
