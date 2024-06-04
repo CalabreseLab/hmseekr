@@ -33,7 +33,7 @@
 # nullTmin: minimal number of probability of null to null transition, this number should be greater than 0 and it is included in the iteration
 # nullTmax: max number of probability of null to null transition, this number should be less than 1 and it is included in the iteration
 # nullTstep: step width between nullTmin and nullTmax, numbers are limited to 6 decimal places
-# func: the function to use for finding hits, default='findhits', other options include 'findhits_condE' or 'findhits_nol'
+# func: the function to use for finding hits, default='findhits_condE', other options include 'findhits' 
 # lengthfilter: only keep hits sequences that have length > lengthfilter for calculating stats in the output, default=25. if no filter is needed, set to 0
 # outputname: File name for output dataframe, default='gridsearch_results'
 # outputdir: path of output directory to save outputs and intermediate files, default is a subfolder called gridsearch under current directory
@@ -79,7 +79,7 @@ from tqdm import tqdm
 
 def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
                queryTmin, queryTmax, queryTstep, nullTmin, nullTmax, nullTstep,
-               func='findhits', lengthfilter=25, 
+               func='findhits_condE', lengthfilter=25, 
                outputname='gridsearch_results',outputdir='./gridsearch/',  
                alphabet='ATCG', progressbar=True):
 
@@ -105,12 +105,9 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
     elif func == 'findhits_condE':
         from hmseekr import findhits_condE
         from hmseekr.findhits_condE import findhits_condE as findhits_cur
-    elif func == 'findhits_nol':
-        from hmseekr import findhits_nol
-        from hmseekr.findhits_nol import findhits_nol as findhits_cur
     else:
         print('Please specify a valid function for finding hits')
-        print('Options include: findhits, findhits_condE, findhits_nol')
+        print('Options include: findhits, findhits_condE')
         return None
 
 
