@@ -432,7 +432,7 @@ outputname is automatically generated as the input findhits filename with '\_see
 
 ### seqstosummary: search and quantify multiple features
 
-This function is designed to get the overall likeliness of each search pool sequence to the query sequences. The function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file (for hmseekr) and a background fasta file (for seekr). Here the transition probability dataframe must have the same rows as the query fasta file. The columns should be '\[qT,nT\]' where qT is the probability of query to query transition, nT is the probability of null to null transition The transition prbability for each query sequence can be different and can be optimized by the gridsearch function. Users can also choose to set the transition probability to be the same for all query sequences. The function will run the kmers, train, findhits and hitseekr functions for each query sequence. Then the results can be filtered by the length of the hit regions, the normalized kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value. Finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence, and also the sum of length normalized kmerLLR (normLLR) for all the counts of a search pool sequence with each the query sequences. Each row of the output dataframe contains a sequence in the search pool fasta, and has four columns: seqName, feature, counts, sum_normLLR: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; sum_normLLR is the sum of length normalized kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; the output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
+This function is designed to get the overall likeliness of each search pool sequence to the query sequences. The function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file (for hmseekr) and a background fasta file (for seekr). Here the transition probability dataframe must have the same rows as the query fasta file. The columns should be '\[qT,nT\]' where qT is the probability of query to query transition, nT is the probability of null to null transition The transition prbability for each query sequence can be different and can be optimized by the gridsearch function. Users can also choose to set the transition probability to be the same for all query sequences. The function will run the kmers, train, findhits and hitseekr functions for each query sequence. Then the results can be filtered by the length of the hit regions, the normalized kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value. Finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence, and also the sum of length normalized kmerLLR (normLLR) and length for all the counts of a search pool sequence with each the query sequences. For long format each row of the output dataframe contains a sequence in the search pool fasta, and has five columns: seqName, feature, counts, sum_normLLR, sum_len: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; sum_normLLR is the sum of length normalized kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; sum_len is the sum of the length of all counts of a search pool sequence with the query sequences. For wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta and columns are eachfeature_counts, eachfeature_sum_normLLR, eachfeature_sum_len. The output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
 
 
 
@@ -440,7 +440,7 @@ This function is designed to get the overall likeliness of each search pool sequ
 search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E
 
 ```
-hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -lenf 25 -llrf 0 -pf 1 -name 'seqstosummary_results' -dir './seqstosummary/' -a 'ATCG' -pb
+hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -lenf 25 -llrf 0 -pf 1 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
 ```
 
 #### Python Example:
@@ -458,7 +458,7 @@ testsum = seqstosummary(queryfadir='./fastaFiles/mXist_repeats.fa',
                         lenfilter=25,llrfilter=0, pfilter=1,
                         outputname='seqstosummary_results', 
                         outputdir='/Users/shuang/seqstosummary/', 
-                        alphabet='ATCG', progressbar=True)
+                        outdfformat='long', alphabet='ATCG', progressbar=True)
 ```
 
 #### Inputs:
@@ -475,11 +475,13 @@ testsum = seqstosummary(queryfadir='./fastaFiles/mXist_repeats.fa',
 10. pfilter (-pf): only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1. if no filter is needed, set to 1
 11. outputname (-name): File name for output dataframe, default='seqstosummary_results'
 12. outputdir (-dir): path of output directory to save outputs and intermediate files, default is a subfolder called seqstosummary under current directory. The intermediate fasta seq files, count files, trained models and hits files are automatically saved under the outputdir into subfolders: seqs, counts, models, hits, where qT and nT are included in the file names
-13. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
-14. progressbar (-pb): whether to show progress bar, default=True: show progress bar
+13. outdfformat (-format): the format of the output dataframe, default='long', other option is 'wide'
+14. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
+15. progressbar (-pb): whether to show progress bar, default=True: show progress bar
 
 #### Output:
-a dataframe where each row contains a sequence in the search pool fasta file, and four columns: seqName, feature, counts, sum_normLLR: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; sum_normLLR is the sum of length normalized kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
+a dataframe in long format: where each row contains a sequence in the search pool fasta file, and five columns: seqName, feature, counts, sum_normLLR, sum_len: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; sum_normLLR is the sum of length normalized kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; sum_len is the sum of the length of all counts of a search pool sequence with the query sequences. In wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta, and columns are eachfeature_counts, eachfeature_sum_normLLR, eachfeature_sum_len
+
 
 
 
