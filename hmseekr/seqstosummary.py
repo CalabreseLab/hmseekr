@@ -2,7 +2,9 @@
 ### Description: 
 # This function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file and a background fasta file
 # and generates a summary dataframe where each row contains a sequence in the search pool fasta file
-# and four columns: seqName, feature, counts, sum_normLLR
+# and five columns: seqName, feature, counts, sum_normLLR, sum_len (long format)
+# or a wide format dataframe where each row corresponds to a sequence in the search pool fasta file
+# and columns are eachfeature_counts, eachfeature_sum_normLLR, eachfeature_sum_len
 
 
 ### Details:
@@ -14,13 +16,16 @@
 # the function will run the kmers, train, findhits and hitseekr functions for each query sequence
 # then the results can be filtered by the length of the hit regions, the normalized kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value
 # finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence
-# and also the sum of length normalized kmerLLR for all the counts of a search pool sequence with each the query sequences
-# each row of the output dataframe contains a sequence in the search pool fasta
-# and has four columns: seqName, feature, counts, sum_normLLR
+# and also the sum of length normalized kmerLLR and length for all the counts of a search pool sequence with each the query sequences
+# for long format: each row of the output dataframe contains a sequence in the search pool fasta
+# and has five columns: seqName, feature, counts, sum_normLLR, sum_len
 # seqName corresponds to the header in the search pool fasta file
 # feature corresponds to the header in the query fasta file
 # counts is the counts of filtered hit regions of the search pool sequences with the query sequences
 # sum_normLLR is the sum of length normalized kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
+# sum_len is the sum of the length of all counts of a search pool sequence with the query sequences
+# for wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
+# and columns are eachfeature_counts, eachfeature_sum_normLLR, eachfeature_sum_len
 # the output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
 
 
@@ -50,16 +55,20 @@
 # outputdir: path of output directory to save outputs and intermediate files, default is a subfolder called seqstosummary under current directory
 # the intermediate fasta seq files, count files, trained models and hits files 
 # are automatically saved under the outputdir into subfolders: seqs counts, models, hits
+# outdfformat: the format of the output dataframe, default='long', other option is 'wide'
 # alphabet: String, Alphabet to generate k-mers default='ATCG'
 # progressbar: whether to show progress bar, default=True: show progress bar
 
 ### Output:
-# a dataframe where each row contains a sequence in the search pool fasta file
-# and four columns: seqName, feature, counts, sum_normLLR
+# a dataframe in long format: where each row contains a sequence in the search pool fasta file
+# five columns: seqName, feature, counts, sum_normLLR, sum_len
 # seqName corresponds to the header in the search pool fasta file
 # feature corresponds to the header in the query fasta file
 # counts is the counts of filtered hit regions of the search pool sequences with the query sequences
 # sum_normLLR is the sum of length normalized kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
+# sum_len is the sum of the length of all counts of a search pool sequence with the query sequences
+# in wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
+# and columns are eachfeature_counts, eachfeature_sum_normLLR, eachfeature_sum_len
 
 
 ### Example:
@@ -74,7 +83,8 @@
 #                         lenfilter=25,llrfilter=0, pfilter=1,
 #                         outputname='seqstosummary_results', 
 #                         outputdir='/Users/shuang/seqstosummary/', 
-#                         alphabet='ATCG', progressbar=True)
+#                         outdfformat='long',alphabet='ATCG', 
+#                         progressbar=True)
 
 
 ########################################################################################################
@@ -97,7 +107,7 @@ from tqdm import tqdm
 def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
                   func='findhits_condE', lenfilter=25, llrfilter=0, pfilter=1,
                   outputname='seqstosummary_results',outputdir='./seqstosummary/', 
-                  alphabet='ATCG', progressbar=True):
+                  outdfformat='long',alphabet='ATCG', progressbar=True):
     
     # read in the query fasta file
     queryseqs = seekrReader(queryfadir).get_seqs()
@@ -314,13 +324,27 @@ def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
         return None
     else: 
         # group by the search pool sequence and the feature name
-        combstats_summary = combstats.groupby(['seqName','feature']).agg({'Length':'count','normLLR':'sum'}).reset_index()
+        combstats_summary = combstats.groupby(['seqName','feature']).agg({'Start':'count','normLLR':'sum','Length':'sum'}).reset_index()
         # rename the columns
-        combstats_summary.columns = ['seqName','feature','counts','sum_normLLR']
-        # save the summary dataframe
-        combstats_summary.to_csv(f'{newDir}{outputname}.csv',index=False)
+        combstats_summary.columns = ['seqName','feature','counts','sum_normLLR','sum_len']
 
-        return combstats_summary
+        if outdfformat == 'long':
+            # save the summary dataframe
+            combstats_summary.to_csv(f'{newDir}{outputname}_long.csv',index=False)
+
+            return combstats_summary
+        elif outdfformat == 'wide':
+            # pivot the dataframe
+            combstats_summary_wide = combstats_summary.pivot(index='seqName',columns='feature',values=['counts','sum_normLLR','sum_len'])
+            # Flatten the MultiIndex columns
+            combstats_summary_wide.columns = [f'{col[1]}_{col[0]}' for col in combstats_summary_wide.columns]
+            # Reset index to make 'seqName' a column again
+            combstats_summary_wide = combstats_summary_wide.reset_index()
+            # save the summary dataframe
+            combstats_summary_wide.to_csv(f'{newDir}{outputname}_wide.csv')
+
+            return combstats_summary_wide
+
 
 
 

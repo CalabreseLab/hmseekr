@@ -296,7 +296,7 @@ SEQSTOSUMMARY_DOC = """
 Description: 
 This function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file and a background fasta file.
 and generates a summary dataframe where each row contains a sequence in the search pool fasta file
-and four columns: seqName, feature, counts, sum_normLLR
+and five columns: seqName, feature, counts, sum_normLLR, sum_len
 
 Details:
 this function is designed to get the overall likeliness of each search pool sequence to the query sequences
@@ -307,19 +307,22 @@ users can also choose to set the transition probability to be the same for all q
 the function will run the kmers, train, findhits and hitseekr functions for each query sequence
 then the results can be filtered by the length of the hit regions, the normalized kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value
 finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence
-and also the sum of length normalized kmerLLR for all the counts of a search pool sequence with each the query sequences
-each row of the output dataframe contains a sequence in the search pool fasta
-and has four columns: seqName, feature, counts, sum_normLLR
+and also the sum of length normalized kmerLLR and length for all the counts of a search pool sequence with each the query sequences
+for long format: each row of the output dataframe contains a sequence in the search pool fasta
+and has five columns: seqName, feature, counts, sum_normLLR, sum_len
 seqName corresponds to the header in the search pool fasta file
 feature corresponds to the header in the query fasta file
 counts is the counts of filtered hit regions of the search pool sequences with the query sequences
 sum_normLLR is the sum of length normalized kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
+sum_len is the sum of the length of all counts of a search pool sequence with the query sequences
+for wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
+and columns are eachfeature_counts, eachfeature_sum_normLLR, eachfeature_sum_len
 the output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
 
 
 Example:
 search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E
-    $ hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -lenf 25 -llrf 0 -pf 1 -name 'seqstosummary_results' -dir './seqstosummary/' -a 'ATCG' -pb
+    $ hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -lenf 25 -llrf 0 -pf 1 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
 
 
 For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
@@ -613,6 +616,7 @@ def console_hmseekr_seqstosummary():
     parser.add_argument("-pf","--pfilter",type=float,help='only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1', default=1.0)
     parser.add_argument("-name","--outputname",type=str,help='File name for output dataframe', default='seqstosummary_results')
     parser.add_argument("-dir","--outputdir",type=str,help='Directory to save output dataframe and intermediate files',default='./seqstosummary/')
+    parser.add_argument("-format","--outdfformat",type=str,help="the format of the output dataframe, default='long', other option is 'wide'",default='long')
     parser.add_argument("-a","--alphabet",type=str,help='String, Alphabet to generate k-mers (e.g. ATCG)',default='ATCG')
     parser.add_argument("-pb","--progressbar",action='store_true',help='when called, progress bar will be shown; if omitted, no progress bar will be shown')
 
@@ -631,6 +635,7 @@ def console_hmseekr_seqstosummary():
         args.pfilter,
         args.outputname,
         args.outputdir,
+        args.outdfformat,
         args.alphabet,
         args.progressbar
         )
