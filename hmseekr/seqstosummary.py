@@ -346,7 +346,7 @@ def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
             # Reset index to make 'seqName' a column again
             combstats_summary_wide = combstats_summary_wide.reset_index()
             # save the summary dataframe
-            combstats_summary_wide.to_csv(f'{newDir}{outputname}_wide.csv')
+            combstats_summary_wide.to_csv(f'{newDir}{outputname}_wide.csv',index=False)
 
             return combstats_summary_wide
 
