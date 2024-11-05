@@ -322,17 +322,21 @@ def findhits_nol(searchpool,modeldir,knum,outputname='hits',outputdir='./',alpha
 
 
         #Check if no hits were found
-        # if not all(v == None for v in dataDict.values()):
-        dataFrames = pd.concat([df for df in dataDict.values() if not None])
-        dataFrames['Start'] += i+1 #1-start coordinates and count in the shift
-        dataFrames['End'] += i # count in the shift
-        # this make sure the coordinates across the shifts are consistent with the original sequence
-        dataFrames['Length'] = dataFrames['End'] - dataFrames['Start'] +1
-        dataFrames = dataFrames[['Start','End','Length','kmerLLR','seqName','Sequence']]
-        if not fasta:
-            dataFrames = dataFrames[['Start','End','Length','kmerLLR','seqName']]
-        dataFrames.sort_values(by='kmerLLR',ascending=False,inplace=True)
-        dataFrames.reset_index(inplace=True,drop=True)
+        if not all(v == None for v in dataDict.values()):
+            dataFrames = pd.concat([df for df in dataDict.values() if not None])
+            dataFrames['Start'] += i+1 #1-start coordinates and count in the shift
+            dataFrames['End'] += i # count in the shift
+            # this make sure the coordinates across the shifts are consistent with the original sequence
+            dataFrames['Length'] = dataFrames['End'] - dataFrames['Start'] +1
+            dataFrames = dataFrames[['Start','End','Length','kmerLLR','seqName','Sequence']]
+            if not fasta:
+                dataFrames = dataFrames[['Start','End','Length','kmerLLR','seqName']]
+            dataFrames.sort_values(by='kmerLLR',ascending=False,inplace=True)
+            dataFrames.reset_index(inplace=True,drop=True)
+        else:
+            dataFrames = pd.DataFrame(columns=['Start', 'End', 'Length', 'kmerLLR', 'seqName', 'Sequence'])
+            if not fasta:
+                dataFrames = dataFrames[['Start', 'End', 'Length', 'kmerLLR', 'seqName']]
 
         mDir = outputdir
         if not mDir.endswith('/'):
