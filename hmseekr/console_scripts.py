@@ -488,7 +488,7 @@ def console_hmseekr_gridsearch():
     parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be one single integer', required=True)
     parser.add_argument("-ql","--qTlist",type=str,help="Comma delimited string of possible qT (query to query transition) values. For example, 0.1,0.9,0.05 or 0.9,0.99,0.999", required=True)  
     parser.add_argument("-nl","--nTlist",type=str,help="Comma delimited string of possible nT (null to null transition) values. For example, 0.1,0.9,0.05 or 0.9,0.99,0.999", required=True)
-    parser.add_argument("-step","--stepaction",action='store_true',help='when called, stepping mode will be applied in generating qT and nT values from qTlist and nTlist (min, max, step); if omitted, qT and nT values will be directly used from qTlist and nTlist')
+    parser.add_argument("-step","--stepmode",action='store_true',help='when called, stepping mode will be applied in generating qT and nT values from qTlist and nTlist (min, max, step); if omitted, qT and nT values will be directly used from qTlist and nTlist')
     parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits and findhits_condE', default='findhits_condE')
     parser.add_argument("-lf","--lengthfilter",type=int,help='only keep hits sequences that have length > lengthfilter for calculating stats. must be one single integer', default=25)
     parser.add_argument("-name","--outputname",type=str,help='File name for output dataframe', default='gridsearch_results')
@@ -506,7 +506,7 @@ def console_hmseekr_gridsearch():
         args.knum,
         args.qTlist,
         args.nTlist,
-        args.stepaction,
+        args.stepmode,
         args.func,
         args.lengthfilter,
         args.outputname,
