@@ -38,6 +38,7 @@ import pickle
 from itertools import starmap
 from itertools import product
 from hmseekr import corefunctions
+import os
 
 
 def kmers(fadir,kvec,alphabet='ATCG',outputname='out', outputdir='./'):
@@ -72,6 +73,10 @@ def kmers(fadir,kvec,alphabet='ATCG',outputname='out', outputdir='./'):
     kDir = outputdir
     if not kDir.endswith('/'):
         kDir+='/'
+
+    if not os.path.exists(kDir):
+        os.mkdir(kDir)
+
     pickle.dump(dataDict,open(f'{kDir}{outputname}.dict','wb'))
 
     return dataDict
