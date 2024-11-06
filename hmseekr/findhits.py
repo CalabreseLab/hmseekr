@@ -128,6 +128,7 @@ from math import log
 import pandas as pd
 from operator import itemgetter
 from tqdm import tqdm
+import os
 
 
 
@@ -219,6 +220,9 @@ def findhits(searchpool,modeldir,knum,outputname='hits',outputdir='./',alphabet=
     mDir = outputdir
     if not mDir.endswith('/'):
         mDir+='/'
+    
+    if not os.path.exists(mDir):
+        os.mkdir(mDir)
 
     dataFrames.to_csv(f'{mDir}{outputname}_{k}_viterbi.txt',sep='\t', index=False)
 

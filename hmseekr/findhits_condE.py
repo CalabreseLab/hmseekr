@@ -134,6 +134,7 @@ import pandas as pd
 from operator import itemgetter
 from tqdm import tqdm
 import numpy as np
+import os
 
 
 def find_new_starts(vector):
@@ -385,6 +386,9 @@ def findhits_condE(searchpool,modeldir,knum,outputname='hits',outputdir='./',alp
     mDir = outputdir
     if not mDir.endswith('/'):
         mDir+='/'
+    
+    if not os.path.exists(mDir):
+        os.mkdir(mDir)
 
     dataFrames.to_csv(f'{mDir}{outputname}_{k}_viterbi.txt',sep='\t', index=False)
 
