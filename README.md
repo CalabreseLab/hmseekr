@@ -245,14 +245,22 @@ Output has the same format as findhits/hmseekr_findhits function. But instead of
 
 ### gridsearch: search for best transition probabilities
 
-This function performs a grid search to find the best trasnition probabilities for query to query and null to null states, which is used in the train function. This function takes in query sequence, null squence and background sequence (see Inputs for details) fasta files, ranges and steps for query to query transition rate (qT) and null to null transition rate (nT), a specific kmer number and performs the train function and findhits function for each combination of qT and nT. Within the hits sequences (findhits function results), only keep the sequence with length greater than 25nt. Then calculates pearson correlation r score (seekr.pearson) between the filtered hit sequences (findhits results) and the query sequence. It returns a dataframe (.csv file) containing the qT, nT, kmer number, the total number of hits sequences and the mean, median, standard deviation of the hits sequences' pearson correlation r score to the query sequence and the mean, median, standard deviation of the length of the hits sequences. If query fasta contains more than one sequence, all the sequences in query fasta file will be merged to one sequence, for calculating kmer count files for hmseekr (hmseekr.kmers) and for calculating seekr.pearson. This function requires the seekr package to be installed. As there are iterations of train and findhits functions, which could take long time, it is recommended to run this function on a high performance computing cluster. Variants of findhits functions can be specified to run.
+This function performs a grid search to find the best trasnition probabilities for query to query and null to null states, which is used in the train function. This function takes in query sequence, null squence and background sequence (see Inputs for details) fasta files, ranges and steps or values for query to query transition rate (qT) and null to null transition rate (nT), a specific kmer number and performs the train function and findhits function for each combination of qT and nT. Within the hits sequences (findhits function results), only keep the sequence with length greater than 25nt. Then calculates pearson correlation r score (seekr.pearson) between the filtered hit sequences (findhits results) and the query sequence. It returns a dataframe (.csv file) containing the qT, nT, kmer number, the total number of hits sequences and the mean, median, standard deviation of the hits sequences' pearson correlation r score to the query sequence and the mean, median, standard deviation of the length of the hits sequences. If query fasta contains more than one sequence, all the sequences in query fasta file will be merged to one sequence, for calculating kmer count files for hmseekr (hmseekr.kmers) and for calculating seekr.pearson. This function requires the seekr package to be installed. As there are iterations of train and findhits functions, which could take long time, it is recommended to run this function on a high performance computing cluster. Variants of findhits functions can be specified to run.
 
 
 #### Console Example:
 perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99 with step of 0.01 with lengthfilter set to 25, which only keep the hit sequences with length greater than 25 for stats calculation. the regular 'findhits' function is used here.
 
 ```
-hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -qTmin 0.9 -qTmax 0.99 -qTstep 0.01 -nTmin 0.9 -nTmax 0.99 -nTstep 0.01 -fc 'findhits' -lf 25 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
+hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.01 -nl 0.9,0.99,0.01 -step -fc 'findhits' -lf 25 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
+```
+
+
+perform a grid search to find the best transition probabilities for qT and nT each exactly as 0.9,0.99,0.999 with lengthfilter set to 25
+which only keep the hit sequences with length greater than 25 for stats calculation. the conditioned Emission 'findhits_condE' function is used here.
+
+```
+hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.999 -nl 0.9,0.99,0.999 -fc 'findhits_condE' -lf 25 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
 ```
 
 #### Python Example:
@@ -264,9 +272,31 @@ from hmseekr.gridsearch import gridsearch
 testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa', 
                         nullfadir='./fastaFiles/all_lncRNA.fa', 
                         searchpool='./fastaFiles/pool.fa',
-                        bkgfadir='./fastaFiles/bkg.fa',knum=4, 
-                        queryTmin=0.9, queryTmax=0.99, queryTstep=0.01,
-                        nullTmin=0.9, nullTmax=0.99, nullTstep=0.01,
+                        bkgfadir='./fastaFiles/bkg.fa',
+                        knum=4, qTlist='0.9,0.99,0.01', 
+                        nTlist='0.99,0.999,0.001', 
+                        stepaction=True,
+                        func='findhits', lengthfilter=25,
+                        outputname='gridsearch_results', 
+                        outputdir='./gridsearch/', 
+                        alphabet='ATCG', progressbar=True)
+```
+
+
+perform a grid search to find the best transition probabilities for qT and nT each exactly as 0.9,0.99,0.999 with lengthfilter set to 25
+which only keep the hit sequences with length greater than 25 for stats calculation. the conditioned Emission 'findhits_condE' function is used here.
+
+
+```python
+from hmseekr.gridsearch import gridsearch
+
+testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa', 
+                        nullfadir='./fastaFiles/all_lncRNA.fa', 
+                        searchpool='./fastaFiles/pool.fa',
+                        bkgfadir='./fastaFiles/bkg.fa',
+                        knum=4, qTlist='0.9,0.99,0.999', 
+                        nTlist='0.99,0.999,0.999', 
+                        stepaction=False,
                         func='findhits_condE', lengthfilter=25,
                         outputname='gridsearch_results', 
                         outputdir='./gridsearch/', 
@@ -280,18 +310,15 @@ testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa',
 3. searchpool (-pool): Path to fasta file which defines the region to search for potential hits (highly similar regions) based on the precalculated model (train function)
 4. bkgfadir (-bkgf): fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function. This fasta file can be different from the nullfadir fasta file
 5. knum (-k): a single integer value for kmer number
-6. queryTmin (-qTmin): minimal number of probability of query to query transition, this number should be greater than 0 and it is included in the iteration
-7. queryTmax (-qTmax): max number of probability of query to query transition, this number should be less than 1 and it is included in the iteration
-8. queryTstep (-qTstep): step width between queryTmin and queryTmax, numbers are limited to 6 decimal places
-9. nullTmin (-nTmin): minimal number of probability of null to null transition, this number should be greater than 0 and it is included in the iteration
-10. nullTmax (-nTmax): max number of probability of null to null transition, this number should be less than 1 and it is included in the iteration
-11. nullTstep (-nTstep): step width between nullTmin and nullTmax, numbers are limited to 6 decimal places
-12. func (-fc): the function to use for finding hits, default='findhits_condE', other options include 'findhits'
-13. lengthfilter (-lf): only keep hits sequences that have length > lengthfilter for calculating stats in the output, default=25. if no filter is needed, set to 0
-14. outputname (-name): File name for output dataframe, default='gridsearch_results'
-15. outputdir (-dir): path of output directory to save outputs and intermediate files, default is a subfolder called gridsearch under current directory. The intermediate fasta seq files, count files, trained models and hits files are automatically saved under the outputdir into subfolders: seqs, counts, models, hits, where qT and nT are included in the file names as the iterated transition probabilities
-16. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
-17. progressbar (-pb): whether to show progress bar, default=True: show progress bar
+6. qTlist (-ql): specify probability of query to query transition. if stepaction is False, the input should be a string of numbers separated by commas: '0.9,0.99,0.999' with no limit on the length of the list. all the numbers in the list that are  greater than 0 and less than 1 are used as qT values in the iteration. if stepaction is True, the input should be a string of exactly three numbers separated by commas: '0.1,0.9,0.05' as min, max, step. the min, max, step values are used to generate a list of qT values, with min and max included. all the numbers that are greater than 0 and less than 1 are used as qT values in the iteration.
+7. nTlist (-nl): specify probability of null to null transition. the setting is the same as in qTlist.
+8. stepaction (-step): True or False, defines whether to use the qTlist and nTlist as min, max, step or as a list of values for qT and nT. Default is True: use qTlist and nTlist as min, max, step.
+9. func (-fc): the function to use for finding hits, default='findhits_condE', other options include 'findhits'
+10. lengthfilter (-lf): only keep hits sequences that have length > lengthfilter for calculating stats in the output, default=25. if no filter is needed, set to 0
+11. outputname (-name): File name for output dataframe, default='gridsearch_results'
+12. outputdir (-dir): path of output directory to save outputs and intermediate files, default is a subfolder called gridsearch under current directory. The intermediate fasta seq files, count files, trained models and hits files are automatically saved under the outputdir into subfolders: seqs, counts, models, hits, where qT and nT are included in the file names as the iterated transition probabilities
+13. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
+14. progressbar (-pb): whether to show progress bar, default=True: show progress bar
 
 #### Output:
 a dataframe containing information about qT, nT, kmer number, the total number of hits sequences and the mean, median, standard deviation of the hits sequences' pearson correlation r score to the query sequence and the mean, median, standard deviation of the length of the hits sequences after filtering by lengthfilter
