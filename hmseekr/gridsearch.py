@@ -27,12 +27,12 @@
 # bkgfadir: fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function
 # this fasta file can be different from the nullfadir fasta file
 # knum: a single integer value for kmer number
-# queryTmin: minimal number of probability of query to query transition, this number should be greater than 0 and it is included in the iteration
-# queryTmax: max number of probability of query to query transition, this number should be less than 1 and it is included in the iteration
-# queryTstep: step width between queryTmin and queryTmax, numbers are limited to 6 decimal places
-# nullTmin: minimal number of probability of null to null transition, this number should be greater than 0 and it is included in the iteration
-# nullTmax: max number of probability of null to null transition, this number should be less than 1 and it is included in the iteration
-# nullTstep: step width between nullTmin and nullTmax, numbers are limited to 6 decimal places
+# qTlist: specify probability of query to query transition. if stepaction is False, the input should be a string of numbers separated by commas: '0.9,0.99,0.999' with no limit on the length of the list.
+# all the numbers in the list that are  greater than 0 and less than 1 are used as qT values in the iteration
+# if stepaction is True, the input should be a string of exactly three numbers separated by commas: '0.1,0.9,0.05' as min, max, step.
+# the min, max, step values are used to generate a list of qT values, with min and max included. all the numbers that are greater than 0 and less than 1 are used as qT values in the iteration.
+# nTlist: specify probability of null to null transition. the setting is the same as in qTlist.
+# stepaction: True or False, defines whether to use the qTlist and nTlist as min, max, step or as a list of values for qT and nT. Default is True: use qTlist and nTlist as min, max, step.
 # func: the function to use for finding hits, default='findhits_condE', other options include 'findhits' 
 # lengthfilter: only keep hits sequences that have length > lengthfilter for calculating stats in the output, default=25. if no filter is needed, set to 0
 # outputname: File name for output dataframe, default='gridsearch_results'
@@ -54,9 +54,19 @@
 #                         nullfadir='/Users/shuang/mSEEKR/fastaFiles/mm10_exp_map_200.fa', 
 #                         searchpool='../fastaFiles/pool.fa',
 #                         bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',knum=4, 
-#                         queryTmin=0.92, queryTmax=0.99, queryTstep=0.01,
-#                         nullTmin=0.9, nullTmax=0.99, nullTstep=0.01,
+#                         qTlist='0.9,0.99,0.05', nTlist='0.99,0.999,0.005', stepaction=True,
 #                         func='findhits',lengthfilter=25,
+#                         outputname='gridsearch_results', 
+#                         outputdir='/Users/shuang/gridsearch/', 
+#                         alphabet='ATCG', progressbar=True)
+
+
+# testsearch = gridsearch(queryfadir='../fastaFiles/mXist_rA.fa', 
+#                         nullfadir='/Users/shuang/mSEEKR/fastaFiles/mm10_exp_map_200.fa', 
+#                         searchpool='../fastaFiles/pool.fa',
+#                         bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',knum=4, 
+#                         qTlist='0.9,0.99,0.999', nTlist='0.99,0.996,0.999', stepaction=False,
+#                         func='findhits_condE',lengthfilter=25,
 #                         outputname='gridsearch_results', 
 #                         outputdir='/Users/shuang/gridsearch/', 
 #                         alphabet='ATCG', progressbar=True)
@@ -78,7 +88,7 @@ from tqdm import tqdm
 
 
 def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
-               queryTmin, queryTmax, queryTstep, nullTmin, nullTmax, nullTstep,
+               qTlist, nTlist, stepaction=True,
                func='findhits_condE', lengthfilter=25, 
                outputname='gridsearch_results',outputdir='./gridsearch/',  
                alphabet='ATCG', progressbar=True):
@@ -112,22 +122,78 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
 
 
     # based on input generate a list of queryT and nullT
-    # include the min and max values in the list
-    queryT_list= [round(i, 6) for i in list(np.arange(queryTmin, queryTmax+queryTstep, queryTstep))]
-    nullT_list= [round(i, 6) for i in list(np.arange(nullTmin, nullTmax+nullTstep, nullTstep))]
-    # filter queryT_list and nullT_list and only keep values that is between 0 and 1
-    queryT_list = [i for i in queryT_list if i > 0 and i < 1]
-    nullT_list = [i for i in nullT_list if i > 0 and i < 1]
+    # if stepaction is True, then use queryTlist and nullTlist as min, max, step
+    # if stepaction is False, then use queryTlist and nullTlist as a list of values
 
-    # check if queryT_list and nullT_list are empty
-    if len(queryT_list) == 0 or len(nullT_list) == 0:
-        print('No valid queryT or nullT values')
-        print('queryT and nullT values should be between 0 and 1, but not equal to 0 or 1')
-        print('Please check queryTmin, queryTmax, queryTstep, nullTmin, nullTmax, nullTstep')
-        return None
 
-    print('queryT_list:', queryT_list)
-    print('nullT_list:', nullT_list)
+    queryTlist = [float(i) for i in qTlist.split(',')]
+    nullTlist = [float(i) for i in nTlist.split(',')]
+
+    
+    if stepaction:
+        # stepaction is True; numlist should be [min, max, step]
+        if len(queryTlist) != 3:
+            raise ValueError("When 'stepaction' is True, 'qTlist' must have exactly three numbers: min, max, step.")
+        if len(nullTlist) != 3:
+            raise ValueError("When 'stepaction' is True, 'nTlist' must have exactly three numbers: min, max, step.")
+        
+        queryTmin, queryTmax, queryTstep = queryTlist
+        nullTmin, nullTmax, nullTstep = nullTlist
+
+        # Check if step is greater than zero and less than one
+        if queryTstep <= 0 or queryTstep >= 1:
+            raise ValueError("Generating qT in stepping mode, as stepaction is True. The step value (3rd number) for 'qTlist' must be greater than zero and less than one.")
+        if nullTstep <= 0 or nullTstep >= 1:
+            raise ValueError("Generating nT in stepping mode, as stepaction is True. The step value (3rd number) for 'nTlist' must be greater than zero and less than one.")
+        
+        # include the min and max values in the list
+        queryT_list= [round(i, 6) for i in list(np.arange(queryTmin, queryTmax+queryTstep, queryTstep))]
+        nullT_list= [round(i, 6) for i in list(np.arange(nullTmin, nullTmax+nullTstep, nullTstep))]
+        # filter queryT_list and nullT_list and only keep values that is between 0 and 1
+        queryT_list = [i for i in queryT_list if i > 0 and i < 1]
+        nullT_list = [i for i in nullT_list if i > 0 and i < 1]
+
+        # check if queryT_list and nullT_list are empty
+        if len(queryT_list) == 0 or len(nullT_list) == 0:
+            print('No valid qT or nT values generated')
+            print('Generating qT and nT in stepping mode, as stepaction is True')
+            print('qTlist and nTlist values are interpreted as min, max, step')
+            print('qTlist and qTlist values should be between 0 and 1, but not equal to 0 or 1')
+            raise ValueError('Please check the qTlist, nTlist and stepaction values')
+        
+        # get the unique values in the list
+        queryT_list = list(set(queryT_list))
+        nullT_list = list(set(nullT_list))
+
+        print('used queryT_list:', queryT_list)
+        print('used nullT_list:', nullT_list)
+
+    else:
+        # stepaction is False; numlist is used as is
+        queryT_list = queryTlist
+        nullT_list = nullTlist
+
+        # filter queryT_list and nullT_list and only keep values that is between 0 and 1
+        # round to 6 decimal places
+        queryT_list = [round(i, 6) for i in queryT_list if i > 0 and i < 1]
+        nullT_list = [round(i, 6) for i in nullT_list if i > 0 and i < 1]
+
+        # check if queryT_list and nullT_list are empty
+        if len(queryT_list) == 0 or len(nullT_list) == 0:
+            print('No valid qT or nT values')
+            print('Use qT and nT directly from user input qTlist and nTlist, as stepaction is False')
+            print('qTlist and qTlist values should be between 0 and 1, but not equal to 0 or 1')
+            raise ValueError('Please check the qTlist, nTlist and stepaction values')
+        
+        # get the unique values in the list
+        queryT_list = list(set(queryT_list))
+        nullT_list = list(set(nullT_list))
+
+        print('used queryT_list:', queryT_list)
+        print('used nullT_list:', nullT_list)
+
+
+    
     # load in the background sequences and calculate the seekr norm vectors
     print('Calculating background norm vectors')
     print('This could take a while if the background fasta file is large')
