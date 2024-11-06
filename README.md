@@ -464,7 +464,7 @@ testsum = seqstosummary(queryfadir='./fastaFiles/mXist_repeats.fa',
 #### Inputs:
 
 1. queryfadir (-qf): Path to the fasta file of query seqs. Different from other functions such as kmers and gridsearch, if query fasta contains more than one sequence, each sequence will be treated as a separate query sequence
-2. transdf (-td): Path to the transition probability dataframe in csv format, the dataframe should have the same rows as the query fasta file, and the columns should be '\[qT,nT\]' where qT is the probability of query to query transition, nT is the probability of null to null transition. Please include 'qT' and 'nT' as the first row (the column name) in the csv file. Please do not include the index column in the csv file.
+2. transdf (-td): Path to the transition probability dataframe in csv format, the dataframe should have the same rows as the query fasta file, and the columns should be '\[qT,nT\]' where qT is the probability of query to query transition, nT is the probability of null to null transition. Please include 'qT' and 'nT' as the first row (the column names) for the two columns in the csv file. Please do not include the index column in the csv file.
 3. nullfadir (-nf): Path to the fasta file of null model sequences (e.g. transcriptome, genome, etc.)
 4. searchpool (-pool): Path to fasta file which defines the region to search for potential hits (highly similar regions) based on the precalculated model (train function)
 5. bkgfadir (-bkgf): fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function. This fasta file can be different from the nullfadir fasta file
