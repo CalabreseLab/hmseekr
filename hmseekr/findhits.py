@@ -201,7 +201,7 @@ def findhits(searchpool,modeldir,knum,outputname='hits',outputdir='./',alphabet=
 
 
     #Check if no hits were found
-    if not all(v == None for v in dataDict.values()):
+    if not all(v is None for v in dataDict.values()):
         dataFrames = pd.concat([df for df in dataDict.values() if not None])
         dataFrames['Start']+=1 #1-start coordinates
         dataFrames['End']
