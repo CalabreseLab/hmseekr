@@ -275,7 +275,7 @@ testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa',
                         bkgfadir='./fastaFiles/bkg.fa',
                         knum=4, qTlist='0.9,0.99,0.01', 
                         nTlist='0.99,0.999,0.001', 
-                        stepaction=True,
+                        stepmode=True,
                         func='findhits', lengthfilter=25,
                         outputname='gridsearch_results', 
                         outputdir='./gridsearch/', 
@@ -296,7 +296,7 @@ testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa',
                         bkgfadir='./fastaFiles/bkg.fa',
                         knum=4, qTlist='0.9,0.99,0.999', 
                         nTlist='0.99,0.999,0.999', 
-                        stepaction=False,
+                        stepmode=False,
                         func='findhits_condE', lengthfilter=25,
                         outputname='gridsearch_results', 
                         outputdir='./gridsearch/', 
@@ -310,9 +310,9 @@ testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa',
 3. searchpool (-pool): Path to fasta file which defines the region to search for potential hits (highly similar regions) based on the precalculated model (train function)
 4. bkgfadir (-bkgf): fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function. This fasta file can be different from the nullfadir fasta file
 5. knum (-k): a single integer value for kmer number
-6. qTlist (-ql): specify probability of query to query transition. if stepaction is False, the input should be a string of numbers separated by commas: '0.9,0.99,0.999' with no limit on the length of the list. all the numbers in the list that are  greater than 0 and less than 1 are used as qT values in the iteration. if stepaction is True, the input should be a string of exactly three numbers separated by commas: '0.1,0.9,0.05' as min, max, step. the min, max, step values are used to generate a list of qT values, with min and max included. all the numbers that are greater than 0 and less than 1 are used as qT values in the iteration.
+6. qTlist (-ql): specify probability of query to query transition. if stepmode is False, the input should be a string of numbers separated by commas: '0.9,0.99,0.999' with no limit on the length of the list. all the numbers in the list that are  greater than 0 and less than 1 are used as qT values in the iteration. if stepmode is True, the input should be a string of exactly three numbers separated by commas: '0.1,0.9,0.05' as min, max, step. the min, max, step values are used to generate a list of qT values, with min and max included. all the numbers that are greater than 0 and less than 1 are used as qT values in the iteration.
 7. nTlist (-nl): specify probability of null to null transition. the setting is the same as in qTlist.
-8. stepaction (-step): True or False, defines whether to use the qTlist and nTlist as min, max, step or as a list of values for qT and nT. Default is True: use qTlist and nTlist as min, max, step.
+8. stepmode (-step): True or False, defines whether to use the qTlist and nTlist as min, max, step or as a list of values for qT and nT. Default is True: use qTlist and nTlist as min, max, step.
 9. func (-fc): the function to use for finding hits, default='findhits_condE', other options include 'findhits'
 10. lengthfilter (-lf): only keep hits sequences that have length > lengthfilter for calculating stats in the output, default=25. if no filter is needed, set to 0
 11. outputname (-name): File name for output dataframe, default='gridsearch_results'
