@@ -7,10 +7,12 @@
 # this function takes in query sequence, null squence and background sequence (see Inputs for details) fasta files
 # ranges and steps for query to query transition rate (qT) and null to null transition rate (nT)
 # a specific kmer number and performs the train function and findhits function for each combination of qT and nT
-# within the hits sequences (findhits function results), only keep the sequence with length greater than lengthfilter 
+# within the hits sequences (findhits function results), only keep the sequence with length less than lenmax and greater than lenmin 
 # then calculates pearson correlation r score (seekr.pearson) between the filtered hit sequences (findhits results) and the query sequence
-# it returns a dataframe (.csv file) containing the qT, nT, kmer number, the total number of hits sequences and the mean, median, standard deviation of the hits sequences' pearson correlation r score to the query sequence
-# and the mean, median, standard deviation of the length of the hits sequences
+# it returns a dataframe (.csv file) containing the qT, nT, kmer number, the total number of hits sequences and the median, standard deviation of the hits sequences' pearson correlation r score to the query sequence
+# and the median, standard deviation of the length of the hits sequences
+# then if there are more than 50 hits, it calculates the same stats for the top 50 hits sequences, ranked by their seekr r score (seekr.pearson) 
+# if there are less than 50 hits in total, the stats for the top 50 hits are the same as the stats for all the hits
 # if query fasta contains more than one sequence, all the sequences in query fasta file will be merged to one sequence 
 # for calculating kmer count files for hmseekr (hmseekr.kmers) and for calculating seekr.pearson 
 # this function requires the seekr package to be installed
@@ -34,7 +36,8 @@
 # nTlist: specify probability of null to null transition. the setting is the same as in qTlist.
 # stepmode: True or False, defines whether to use the qTlist and nTlist as min, max, step or as a list of values for qT and nT. Default is True: use qTlist and nTlist as min, max, step.
 # func: the function to use for finding hits, default='findhits_condE', other options include 'findhits' 
-# lengthfilter: only keep hits sequences that have length > lengthfilter for calculating stats in the output, default=25. if no filter is needed, set to 0
+# lenmin: keep hits sequences that have length > lenmin for calculating stats in the output, default=100. 
+# lenmax: keep hits sequences that have length < lenmax for calculating stats in the output, default=1000.
 # outputname: File name for output dataframe, default='gridsearch_results'
 # outputdir: path of output directory to save outputs and intermediate files, default is a subfolder called gridsearch under current directory
 # the intermediate fasta seq files, count files, trained models and hits files 
@@ -44,8 +47,8 @@
 # progressbar: whether to show progress bar, default=True: show progress bar
 
 ### Output:
-# a dataframe containing information about qT, nT, kmer number, the total number of hits sequences and the mean, median, standard deviation of the hits sequences' pearson correlation r score to the query sequence
-# and the mean, median, standard deviation of the length of the hits sequences after filtering by lengthfilter
+# a dataframe containing information about qT, nT, kmer number, the total number of hits sequences and the median, standard deviation of the hits sequences' pearson correlation r score to the query sequence
+# and the median, standard deviation of the length of the hits sequences, and the same stats for the top 50 hits sequences (ranked by seekr r score) if there are more than 50 hits, after filtering by lenmin and lenmax
 
 ### Example:
 # from hmseekr.gridsearch import gridsearch
@@ -55,7 +58,7 @@
 #                         searchpool='../fastaFiles/pool.fa',
 #                         bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',knum=4, 
 #                         qTlist='0.9,0.99,0.05', nTlist='0.99,0.999,0.005', stepmode=True,
-#                         func='findhits',lengthfilter=25,
+#                         func='findhits',lenmin=25, lenmax=2000,
 #                         outputname='gridsearch_results', 
 #                         outputdir='/Users/shuang/gridsearch/', 
 #                         alphabet='ATCG', progressbar=True)
@@ -66,7 +69,7 @@
 #                         searchpool='../fastaFiles/pool.fa',
 #                         bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',knum=4, 
 #                         qTlist='0.9,0.99,0.999', nTlist='0.99,0.996,0.999', stepmode=False,
-#                         func='findhits_condE',lengthfilter=25,
+#                         func='findhits_condE',lenmin=25, lenmax=2000,
 #                         outputname='gridsearch_results', 
 #                         outputdir='/Users/shuang/gridsearch/', 
 #                         alphabet='ATCG', progressbar=True)
@@ -89,7 +92,7 @@ from tqdm import tqdm
 
 def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
                qTlist, nTlist, stepmode=True,
-               func='findhits_condE', lengthfilter=25, 
+               func='findhits_condE', lenmin=100, lenmax=1000,
                outputname='gridsearch_results',outputdir='./gridsearch/',  
                alphabet='ATCG', progressbar=True):
 
@@ -251,7 +254,7 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
         query_count.make_count_file() 
 
     # create an empty dataframe to store the results
-    combstats = pd.DataFrame(columns=['qT','nT','knum','total_n','r_mean','r_median','r_std','len_mean','len_median','len_std'])
+    combstats = pd.DataFrame(columns=['qT','nT','knum','total_n','r_median','r_std','len_median','len_std','top50_r_median','top50_r_std','top50_len_median','top50_len_std'])
 
     # initiate a list to store all the pearson correlation r score
     # sim_all = pd.DataFrame(columns=['qT','nT','sim'])
@@ -285,28 +288,62 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
                 os.mkdir(f'{newDir}hits/')
             # find the hits
             hits = findhits_cur(searchpool=searchpool, modeldir=modeldir, knum=knum, outputname=f'hits_q{qT}_n{nT}', outputdir=hitsdir, alphabet=alphabet, fasta=True, progressbar=False)
-            # only keep the rows in hits if Length col is greater than 25nt
-            hits = hits[hits['Length']>lengthfilter]
-            lenvec = np.array(hits['Length'])
-            # save the hits sequences
-            hits_seq = hits['Sequence']
-            hits_header = hits['seqName']+'_'+hits['Start'].astype(str)+'_'+hits['End'].astype(str)
-            hitseqdir = f'{newDir}seqs/hits_seq_q{qT}_n{nT}.fa'
-            
-            # save the hits sequences and its header to a fasta file
-            with open(hitseqdir, 'w') as f:
-                for i in range(len(hits_seq)):
-                    f.write(f'{hits_header.iloc[i]}\n{hits_seq.iloc[i]}\n')
+            # only keep the rows in hits if Length is within the range of lenmin and lenmax
+            hits = hits[(hits['Length']>lenmin) & (hits['Length']<lenmax)]
 
-            # calculate kmer counts of hits sequences and the pearson correlation r score
-            hits_count = seekrBasicCounter(infasta=hitseqdir, outfile=f'{newDir}counts/seekrhits_q{qT}_n{nT}_counts.csv', k=knum, binary=False, label=True, mean=mean_path, std=std_path, log2='Log2.post', leave=True, silent=True, alphabet='ACGT') 
-            hits_count. make_count_file() 
-            sim = seekrPearson(hits_count.counts,query_count.counts)
-            # append the results to the dataframe
-            newrow = {'qT':qT, 'nT':nT, 'knum':knum, 'total_n':len(hits_seq), 'r_mean':np.mean(sim), 'r_median':np.median(sim), 'r_std':np.std(sim), 'len_mean':np.mean(lenvec), 'len_median':np.median(lenvec), 'len_std':np.std(lenvec)}
-            combstats.loc[len(combstats)] = newrow
-            # append the results to sim_all
-            # sim_all = sim_all.append({'qT':qT, 'nT':nT, 'sim':sim}, ignore_index=True)
+            # check if hits is empty
+            if hits.empty:
+                print(f'No hits found for qT={qT}, nT={nT}')
+                # fill NA for all stats in the dataframe for this iteration
+                newrow = {'qT':qT, 'nT':nT, 'knum':knum, 'total_n':0, 'r_median':np.nan, 'r_std':np.nan, 'len_median':np.nan, 'len_std':np.nan, 'top50_r_median':np.nan, 'top50_r_std':np.nan, 'top50_len_median':np.nan, 'top50_len_std':np.nan}
+                combstats.loc[len(combstats)] = newrow
+            else:
+                lenvec = np.array(hits['Length'])
+                # save the hits sequences
+                hits_seq = hits['Sequence']
+                hits_header = hits['seqName']+'_'+hits['Start'].astype(str)+'_'+hits['End'].astype(str)
+                hitseqdir = f'{newDir}seqs/hits_seq_q{qT}_n{nT}.fa'
+                
+                # save the hits sequences and its header to a fasta file
+                with open(hitseqdir, 'w') as f:
+                    for i in range(len(hits_seq)):
+                        f.write(f'{hits_header.iloc[i]}\n{hits_seq.iloc[i]}\n')
+
+                # calculate kmer counts of hits sequences and the pearson correlation r score
+                hits_count = seekrBasicCounter(infasta=hitseqdir, outfile=f'{newDir}counts/seekrhits_q{qT}_n{nT}_counts.csv', k=knum, binary=False, label=True, mean=mean_path, std=std_path, log2='Log2.post', leave=True, silent=True, alphabet='ACGT') 
+                hits_count. make_count_file() 
+                sim = seekrPearson(hits_count.counts,query_count.counts)
+                hits['seekr_r']=sim
+
+                # rank the hits by kmerLLR score and only keep the top 50 hits if there are more than 20 hits
+                if len(hits_seq) > 50:
+                    hits = hits.sort_values(by='seekr_r', ascending=False)
+                    hitstop50 = hits.iloc[:50]
+                    lenvec_top50 = np.array(hitstop50['Length'])
+                    hits_seq_top50 = hitstop50['Sequence']
+                    hits_header_top50 = hitstop50['seqName']+'_'+hitstop50['Start'].astype(str)+'_'+hitstop50['End'].astype(str)
+                    hitseqdir_top50 = f'{newDir}seqs/hits_seq_top50_q{qT}_n{nT}.fa'
+                    # save the top 50 hits sequences and its header to a fasta file
+                    with open(hitseqdir_top50, 'w') as f:
+                        for i in range(len(hits_seq_top50)):
+                            f.write(f'{hits_header_top50.iloc[i]}\n{hits_seq_top50.iloc[i]}\n')
+                    # calculate kmer counts of top 50 hits sequences and the pearson correlation r score
+                    hits_count_top50 = seekrBasicCounter(infasta=hitseqdir_top50, outfile=f'{newDir}counts/seekrhits_top50_q{qT}_n{nT}_counts.csv', k=knum, binary=False, label=True, mean=mean_path, std=std_path, log2='Log2.post', leave=True, silent=True, alphabet='ACGT') 
+                    hits_count_top50. make_count_file() 
+                    sim_top50 = seekrPearson(hits_count_top50.counts,query_count.counts)
+                    # append the results to the dataframe
+                    newrow = {'qT':qT, 'nT':nT, 'knum':knum, 'total_n':len(hits_seq), 'r_median':np.median(sim), 'r_std':np.std(sim), 'len_median':np.median(lenvec), 'len_std':np.std(lenvec), 'top50_r_median':np.median(sim_top50), 'top50_r_std':np.std(sim_top50), 'top50_len_median':np.median(lenvec_top50), 'top50_len_std':np.std(lenvec_top50)}
+                    combstats.loc[len(combstats)] = newrow
+                    # append the results to sim_all
+                    # sim_all = sim_all.append({'qT':qT, 'nT':nT, 'sim':sim}, ignore_index=True)
+
+
+                else:
+                    # append the results to the dataframe, use the same stats for top50 as the full hits
+                    newrow = {'qT':qT, 'nT':nT, 'knum':knum, 'total_n':len(hits_seq), 'r_median':np.median(sim), 'r_std':np.std(sim), 'len_median':np.median(lenvec), 'len_std':np.std(lenvec), 'top50_r_median':np.median(sim), 'top50_r_std':np.std(sim), 'top50_len_median':np.median(lenvec), 'top50_len_std':np.std(lenvec)}
+                    combstats.loc[len(combstats)] = newrow
+                    # append the results to sim_all
+                    # sim_all = sim_all.append({'qT':qT, 'nT':nT, 'sim':sim}, ignore_index=True)
         
     if progressbar:
         pbar.close()  # Close the progress bar when done

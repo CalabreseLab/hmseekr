@@ -163,10 +163,12 @@ Details:
 this function takes in query sequence, null squence and background sequence (see Inputs for details) fasta files
 ranges and steps or values for query to query transition rate (qT) and null to null transition rate (nT)
 a specific kmer number and performs the train function and findhits function for each combination of qT and nT
-within the hits sequences (findhits function results), only keep the sequence with length greater than lengthfilter 
+within the hits sequences (findhits function results), only keep the sequence with length greater than lenmin and less than lenmax 
 then calculates pearson correlation r score (seekr.pearson) between the filtered hit sequences (findhits results) and the query sequence
-it returns a dataframe (.csv file) containing the qT, nT, kmer number, the total number of hits sequences and the mean, median, standard deviation of the hits sequences' pearson correlation r score to the query sequence
-and the mean, median, standard deviation of the length of the hits sequences
+it returns a dataframe (.csv file) containing the qT, nT, kmer number, the total number of hits sequences and the median, standard deviation of the hits sequences' pearson correlation r score to the query sequence
+and the median, standard deviation of the length of the hits sequences
+then if there are more than 50 hits, it calculates the same stats for the top 50 hits sequences, ranked by their seekr r score (seekr.pearson) 
+if there are less than 50 hits in total, the stats for the top 50 hits are the same as the stats for all the hits
 if query fasta contains more than one sequence all the sequences in query fasta file will be merged to one sequence 
 for calculating kmer count files for hmseekr (hmseekr.kmers) and for calculating seekr.pearson 
 this function requires the seekr package to be installed
@@ -175,12 +177,12 @@ variants of findhits functions can be specified to run
 
 Example:
 perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99 with step of 0.01 with lengthfilter set to 25
-which only keep the hit sequences with length greater than 25 for stats calculation. the regular findhits function is used
-    $ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.01 -nl 0.9,0.99,0.01 -step -fc 'findhits' -lf 25 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
+which only keep the hit sequences with length greater than 100 and less than 1000 for stats calculation. the regular findhits function is used
+    $ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.01 -nl 0.9,0.99,0.01 -step -fc 'findhits' -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
 
-perform a grid search to find the best transition probabilities for qT and nT each exactly as 0.9,0.99,0.999 with lengthfilter set to 25
-which only keep the hit sequences with length greater than 25 for stats calculation. the regular findhits function is used
-    $ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.999 -nl 0.9,0.99,0.999 -fc 'findhits' -lf 25 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
+perform a grid search to find the best transition probabilities for qT and nT each exactly as 0.9,0.99,0.999, filtering and keep hit sqeuences with length greater than 100 and less than 1000 for stats calculation. 
+the regular findhits function is used
+    $ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.999 -nl 0.9,0.99,0.999 -fc 'findhits' -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
 
 
 For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
@@ -490,7 +492,8 @@ def console_hmseekr_gridsearch():
     parser.add_argument("-nl","--nTlist",type=str,help="Comma delimited string of possible nT (null to null transition) values. For example, 0.1,0.9,0.05 or 0.9,0.99,0.999", required=True)
     parser.add_argument("-step","--stepmode",action='store_true',help='when called, stepping mode will be applied in generating qT and nT values from qTlist and nTlist (min, max, step); if omitted, qT and nT values will be directly used from qTlist and nTlist')
     parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits and findhits_condE', default='findhits_condE')
-    parser.add_argument("-lf","--lengthfilter",type=int,help='only keep hits sequences that have length > lengthfilter for calculating stats. must be one single integer', default=25)
+    parser.add_argument("-li","--lenmin",type=int,help='keep hits sequences that have length > lenmin, must be one single integer', default=100)
+    parser.add_argument("-la","--lenmax",type=int,help='keep hits sequences that have length < lenmax, must be one single integer', default=1000)
     parser.add_argument("-name","--outputname",type=str,help='File name for output dataframe', default='gridsearch_results')
     parser.add_argument("-dir","--outputdir",type=str,help='Directory to save output dataframe and intermediate files',default='./gridsearch/')
     parser.add_argument("-a","--alphabet",type=str,help='String, Alphabet to generate k-mers (e.g. ATCG)',default='ATCG')
@@ -508,7 +511,8 @@ def console_hmseekr_gridsearch():
         args.nTlist,
         args.stepmode,
         args.func,
-        args.lengthfilter,
+        args.lenmin,
+        args.lenmax,
         args.outputname,
         args.outputdir,
         args.alphabet,
