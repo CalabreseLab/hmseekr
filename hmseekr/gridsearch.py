@@ -254,7 +254,25 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
         query_count.make_count_file() 
 
     # create an empty dataframe to store the results
-    combstats = pd.DataFrame(columns=['qT','nT','knum','total_n','r_median','r_std','len_median','len_std','top50_r_median','top50_r_std','top50_len_median','top50_len_std'])
+    # Define the data types for combstats
+    dtypes = {
+        'qT': float,
+        'nT': float,
+        'knum': int,
+        'total_n': int,
+        'r_median': float,
+        'r_std': float,
+        'len_median': int,
+        'len_std': float,
+        'top50_r_median': float,
+        'top50_r_std': float,
+        'top50_len_median': int,
+        'top50_len_std': float
+    }
+
+    # Initialize combstats with specified data types
+    combstats = pd.DataFrame(columns=dtypes.keys()).astype(dtypes)
+    # combstats = pd.DataFrame(columns=['qT','nT','knum','total_n','r_median','r_std','len_median','len_std','top50_r_median','top50_r_std','top50_len_median','top50_len_std'])
 
     # initiate a list to store all the pearson correlation r score
     # sim_all = pd.DataFrame(columns=['qT','nT','sim'])
@@ -295,7 +313,23 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
             if hits.empty:
                 print(f'No hits found for qT={qT}, nT={nT}')
                 # fill NA for all stats in the dataframe for this iteration
-                newrow = {'qT':qT, 'nT':nT, 'knum':knum, 'total_n':0, 'r_median':np.nan, 'r_std':np.nan, 'len_median':np.nan, 'len_std':np.nan, 'top50_r_median':np.nan, 'top50_r_std':np.nan, 'top50_len_median':np.nan, 'top50_len_std':np.nan}
+                
+                newrow = {
+                'qT': qT,
+                'nT': nT,
+                'knum': knum,
+                'total_n': 0,
+                'r_median': np.nan,
+                'r_std': np.nan,
+                'len_median': np.nan,
+                'len_std': np.nan,
+                'top50_r_median': np.nan,
+                'top50_r_std': np.nan,
+                'top50_len_median': np.nan,
+                'top50_len_std': np.nan
+                }
+
+                #newrow = {'qT':qT, 'nT':nT, 'knum':knum, 'total_n':0, 'r_median':np.nan, 'r_std':np.nan, 'len_median':np.nan, 'len_std':np.nan, 'top50_r_median':np.nan, 'top50_r_std':np.nan, 'top50_len_median':np.nan, 'top50_len_std':np.nan}
                 combstats.loc[len(combstats)] = newrow
             else:
                 lenvec = np.array(hits['Length'])
