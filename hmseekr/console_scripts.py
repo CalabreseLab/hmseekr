@@ -302,27 +302,31 @@ SEQSTOSUMMARY_DOC = """
 Description: 
 This function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file and a background fasta file.
 and generates a summary dataframe where each row contains a sequence in the search pool fasta file
-and five columns: seqName, feature, counts, sum_normLLR, sum_len
+and seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_meidan, pval_median
 
 Details:
 this function is designed to get the overall likeliness of each search pool sequence to the query sequences
 the function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file (for hmseekr) and a background fasta file (for seekr)
 here the transition probability dataframe must have the same rows as the query fasta file
-the transition prbability for each query sequence can be different and can be optimized by the gridsearch function
+the columns should be '[qT,nT]' where qT is the probability of query to query transition, nT is the probability of null to null transition 
+the transition prbability for each query sequence can be different and can be optimized by the gridsearch function. 
+please include 'qT' and 'nT' as the first row (the column names) for the two columns in the csv file. 
 users can also choose to set the transition probability to be the same for all query sequences
 the function will run the kmers, train, findhits and hitseekr functions for each query sequence
-then the results can be filtered by the length of the hit regions, the normalized kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value
+then the results can be filtered by the length of the hit regions, the kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value
 finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence
-and also the sum of length normalized kmerLLR and length for all the counts of a search pool sequence with each the query sequences
+and also the sum of kmerLLR and length, the median of kmerLLR and seekr pval for all the counts of a search pool sequence with each the query sequences
 for long format: each row of the output dataframe contains a sequence in the search pool fasta
-and has five columns: seqName, feature, counts, sum_normLLR, sum_len
+and has seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_meidan, pval_median
 seqName corresponds to the header in the search pool fasta file
 feature corresponds to the header in the query fasta file
 counts is the counts of filtered hit regions of the search pool sequences with the query sequences
-sum_normLLR is the sum of length normalized kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
-sum_len is the sum of the length of all counts of a search pool sequence with the query sequences
+len_sum is the sum of the length of all counts of a search pool sequence with the query sequences
+LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
+LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
+pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences
 for wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
-and columns are eachfeature_counts, eachfeature_sum_normLLR, eachfeature_sum_len
+and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median
 the output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
 
 
@@ -614,7 +618,7 @@ def console_hmseekr_seqstosummary():
     parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be one single integer', required=True)
     parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits and findhits_condE', default='findhits_condE')
     parser.add_argument("-lenf","--lenfilter",type=int,help='only keep hits sequences that have length > lenfilter for calculating stats. must be one single integer, default=25', default=25)
-    parser.add_argument("-llrf","--llrfilter",type=float,help='only keep hits sequences that have length normalized kmerLLR > llrfilter for calculating stats in the output, default=0', default=0.0)
+    parser.add_argument("-llrf","--llrfilter",type=float,help='only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0', default=0.0)
     parser.add_argument("-pf","--pfilter",type=float,help='only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1', default=1.0)
     parser.add_argument("-name","--outputname",type=str,help='File name for output dataframe', default='seqstosummary_results')
     parser.add_argument("-dir","--outputdir",type=str,help='Directory to save output dataframe and intermediate files',default='./seqstosummary/')
