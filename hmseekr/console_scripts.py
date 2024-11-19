@@ -302,7 +302,7 @@ SEQSTOSUMMARY_DOC = """
 Description: 
 This function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file and a background fasta file.
 and generates a summary dataframe where each row contains a sequence in the search pool fasta file
-and seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_meidan, pval_median
+and seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median
 
 Details:
 this function is designed to get the overall likeliness of each search pool sequence to the query sequences
@@ -317,7 +317,7 @@ then the results can be filtered by the length of the hit regions, the kmer log 
 finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence
 and also the sum of kmerLLR and length, the median of kmerLLR and seekr pval for all the counts of a search pool sequence with each the query sequences
 for long format: each row of the output dataframe contains a sequence in the search pool fasta
-and has seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_meidan, pval_median
+and has seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median
 seqName corresponds to the header in the search pool fasta file
 feature corresponds to the header in the query fasta file
 counts is the counts of filtered hit regions of the search pool sequences with the query sequences

@@ -2,7 +2,7 @@
 ### Description: 
 # This function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file and a background fasta file
 # and generates a summary dataframe where each row contains a sequence in the search pool fasta file
-# and seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_meidan, pval_median (long format)
+# and seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median (long format)
 # or a wide format dataframe where each row corresponds to a sequence in the search pool fasta file
 # and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median
 
@@ -20,7 +20,7 @@
 # finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence
 # and also the sum of kmerLLR and length, the median of kmerLLR and seekr pval for all the counts of a search pool sequence with each the query sequences
 # for long format: each row of the output dataframe contains a sequence in the search pool fasta
-# and has seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_meidan, pval_median
+# and has seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median
 # seqName corresponds to the header in the search pool fasta file
 # feature corresponds to the header in the query fasta file
 # counts is the counts of filtered hit regions of the search pool sequences with the query sequences
@@ -63,7 +63,7 @@
 
 ### Output:
 # a dataframe in long format: where each row contains a sequence in the search pool fasta file
-# seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_meidan, pval_median
+# seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median
 # seqName corresponds to the header in the search pool fasta file
 # feature corresponds to the header in the query fasta file
 # counts is the counts of filtered hit regions of the search pool sequences with the query sequences
