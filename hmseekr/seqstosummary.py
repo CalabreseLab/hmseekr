@@ -2,9 +2,9 @@
 ### Description: 
 # This function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file and a background fasta file
 # and generates a summary dataframe where each row contains a sequence in the search pool fasta file
-# and seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median (long format)
+# and eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min (long format)
 # or a wide format dataframe where each row corresponds to a sequence in the search pool fasta file
-# and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median
+# and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min
 
 
 ### Details:
@@ -18,9 +18,9 @@
 # the function will run the kmers, train, findhits and hitseekr functions for each query sequence
 # then the results can be filtered by the length of the hit regions, the kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value
 # finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence
-# and also the sum of kmerLLR and length, the median of kmerLLR and seekr pval for all the counts of a search pool sequence with each the query sequences
+# and also the sum of kmerLLR and length, the median of kmerLLR and seekr pval, and the minimal seekr pval for all the counts of a search pool sequence with each the query sequences
 # for long format: each row of the output dataframe contains a sequence in the search pool fasta
-# and has seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median
+# and has eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min
 # seqName corresponds to the header in the search pool fasta file
 # feature corresponds to the header in the query fasta file
 # counts is the counts of filtered hit regions of the search pool sequences with the query sequences
@@ -28,6 +28,7 @@
 # LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
 # LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
 # pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences
+# pval_min is the minimum of seekr pearson correlation p value for each search pool sequence with the query sequences
 # for wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
 # and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median
 # the output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
@@ -47,7 +48,8 @@
 # this fasta file can be different from the nullfadir fasta file
 # knum: a single integer value for kmer number
 # func: the function to use for finding hits, default='findhits_condE', other options include 'findhits'
-# lenfilter: only keep hits sequences that have length > lengthfilter for calculating stats in the output, default=25. if no filter is needed, set to 0
+# lenmin: only keep hits sequences that have length > lenmin for calculating stats in the output, default=100. if no filter is needed, set to 0
+# lenmax: only keep hits sequences that have length < lenmax for calculating stats in the output, default=1000. 
 # llrfilter: only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0. if no filter is needed, set to 0
 # kmerLLR is the log likelihood ratio of of the probability 
 # that the set of k-mers y within a hit derived from the QUERY versus the NULL state
@@ -63,7 +65,7 @@
 
 ### Output:
 # a dataframe in long format: where each row contains a sequence in the search pool fasta file
-# seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median
+# eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min
 # seqName corresponds to the header in the search pool fasta file
 # feature corresponds to the header in the query fasta file
 # counts is the counts of filtered hit regions of the search pool sequences with the query sequences
@@ -71,8 +73,9 @@
 # LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
 # LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
 # pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences
+# pval_min is the minimum of seekr pearson correlation p value for each search pool sequence with the query sequences
 # in wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
-# and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median
+# and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min
 
 
 ### Example:
@@ -84,7 +87,7 @@
 #                         searchpool='/Users/shuang/mSEEKR/fastaFiles/pool.fa',
 #                         bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',
 #                         knum=4, func='findhits_condE',
-#                         lenfilter=25,llrfilter=0, pfilter=1,
+#                         lenmin=100, lenmax=1000 ,llrfilter=0, pfilter=1,
 #                         outputname='seqstosummary_results', 
 #                         outputdir='/Users/shuang/seqstosummary/', 
 #                         outdfformat='long',alphabet='ATCG', 
@@ -109,7 +112,7 @@ from tqdm import tqdm
 
 
 def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
-                  func='findhits_condE', lenfilter=25, llrfilter=0, pfilter=1,
+                  func='findhits_condE', lenmin=100, lenmax=1000, llrfilter=0, pfilter=1,
                   outputname='seqstosummary_results',outputdir='./seqstosummary/', 
                   outdfformat='long',alphabet='ATCG', progressbar=True):
     
@@ -252,13 +255,14 @@ def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
         # hitseekr, do not use the function as we can recycle the bkg norm vecs and model fits
 
         # only keep the rows in hits if Length col is greater than lengthfilter
-        hits = hits[hits['Length']>lenfilter]
+        hits = hits[hits['Length']>lenmin]
+        hits = hits[hits['Length']<lenmax]
 
         # check if there are still hits after filtering
         if len(hits) == 0:
             print('for query sequence',i+1,'in the query fasta file')
             print('No hits after length filtering')
-            print('Please try a lower lenfilter value')
+            print('Please try to adjust lenmin and lenmax values')
             # skip the rest of the loop and continue to the next query sequence
             print('continue to the next query sequence')
             continue
@@ -337,11 +341,11 @@ def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
             'Start': 'count',
             'Length': 'sum',
             'kmerLLR': ['sum', 'median'],  # Aggregating 'kmerLLR' with both sum and median
-            'seekr_pval': 'median'   
+            'seekr_pval': ['median', 'min']   
         }).reset_index()
 
         # Flatten the MultiIndex columns and rename them
-        combstats_summary.columns = ['seqName', 'feature', 'counts', 'len_sum', 'LLR_sum', 'LLR_median', 'pval_median']
+        combstats_summary.columns = ['seqName', 'feature', 'counts', 'len_sum', 'LLR_sum', 'LLR_median', 'pval_median', 'pval_min']
 
         if outdfformat == 'long':
             # save the summary dataframe
@@ -350,7 +354,7 @@ def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
             return combstats_summary
         elif outdfformat == 'wide':
             # pivot the dataframe
-            combstats_summary_wide = combstats_summary.pivot(index='seqName',columns='feature',values=['counts', 'len_sum', 'LLR_sum', 'LLR_median', 'pval_median'])
+            combstats_summary_wide = combstats_summary.pivot(index='seqName',columns='feature',values=['counts', 'len_sum', 'LLR_sum', 'LLR_median', 'pval_median', 'pval_min'])
             # Flatten the MultiIndex columns
             combstats_summary_wide.columns = [f'{col[1]}_{col[0]}' for col in combstats_summary_wide.columns]
             # Reset index to make 'seqName' a column again
