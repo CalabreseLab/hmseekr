@@ -85,12 +85,13 @@ along the searchpool fasta sequences, similarity scores to query seq will be cal
 hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment
 kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment
 kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q state minus the log likelihood of them being in the N state
+user can choose to merge small gaps between hits segments before finalizing the hits dataframe by setting streaklen and gaplen
 
 Example:
 use the previously trained model (hmm.dict by hmseekr_train function) to search for highly similar regions to query seq (repeatA)
 within the pool.fa files (area of interest region to find sequences similar to query, could be all lncRNAs or just chromosome 6) 
 with kmer size 4 and save the hit sequences while showing progress bar
-    $ hmseekr_findhits -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -name 'hits' -dir './models/'  -a 'ATCG' -fa -pb
+    $ hmseekr_findhits -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -sl 20 -gl 5 -name 'hits' -dir './models/'  -a 'ATCG' -fa -pb
 
 minimal code with all settings to default
     $ hmseekr_findhits -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -fa
@@ -114,7 +115,7 @@ np.log2(emission probability of 'AGCA' in the original E) - np.log2(sum of emiss
 
 Example:
 same example as hmseekr_findhits but uses the conditioned emission probability of the next word given the current word
-    $ hmseekr_findhits_condE -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -name 'hits' -dir './models/'  -a 'ATCG' -fa -pb
+    $ hmseekr_findhits_condE -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -sl 20 -gl 5 -name 'hits' -dir './models/'  -a 'ATCG' -fa -pb
 
 minimal code with all settings to default
     $ hmseekr_findhits_condE -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -fa
@@ -302,7 +303,7 @@ SEQSTOSUMMARY_DOC = """
 Description: 
 This function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file and a background fasta file.
 and generates a summary dataframe where each row contains a sequence in the search pool fasta file
-and seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median
+and eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min
 
 Details:
 this function is designed to get the overall likeliness of each search pool sequence to the query sequences
@@ -315,9 +316,9 @@ users can also choose to set the transition probability to be the same for all q
 the function will run the kmers, train, findhits and hitseekr functions for each query sequence
 then the results can be filtered by the length of the hit regions, the kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value
 finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence
-and also the sum of kmerLLR and length, the median of kmerLLR and seekr pval for all the counts of a search pool sequence with each the query sequences
+and also the sum of kmerLLR and length, the median of kmerLLR and seekr pval, and the minimal seekr pval for all the counts of a search pool sequence with each the query sequences
 for long format: each row of the output dataframe contains a sequence in the search pool fasta
-and has seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median
+and has eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min
 seqName corresponds to the header in the search pool fasta file
 feature corresponds to the header in the query fasta file
 counts is the counts of filtered hit regions of the search pool sequences with the query sequences
@@ -325,14 +326,15 @@ len_sum is the sum of the length of all counts of a search pool sequence with th
 LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
 LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
 pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences
+pval_min is the minimal seekr pearson correlation p value for each search pool sequence with the query sequences
 for wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
-and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median
+and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min
 the output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
 
 
 Example:
 search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E
-    $ hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -lenf 25 -llrf 0 -pf 1 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
+    $ hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -li 100 -la 1000 -llrf 0 -pf 1 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
 
 
 For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
@@ -352,7 +354,7 @@ def _parse_args_or_exit(parser):
 
 
 def console_hmseekr_kmers():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    assert sys.version_info >= (3, 9), "Python version must be 3.9"
     parser = argparse.ArgumentParser(usage=KMERS_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-fd","--fadir", type=str,help='Path to input fasta file', required=True)
@@ -373,7 +375,7 @@ def console_hmseekr_kmers():
     
 
 def console_hmseekr_train():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    assert sys.version_info >= (3, 9), "Python version must be 3.9"
     parser = argparse.ArgumentParser(usage=TRAIN_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-qd","--querydir",type=str,help='Path to kmer count file for query sequence or sequence of interest (e.g. functional regions of a ncRNA)', required=True)
@@ -402,12 +404,14 @@ def console_hmseekr_train():
 
 
 def console_hmseekr_findhits():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    assert sys.version_info >= (3, 9), "Python version must be 3.9"
     parser = argparse.ArgumentParser(usage=FINDHITS_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-pool","--searchpool",type=str,help='Path to fasta file from which the similarity scores to query seq will be calculated and hits seqs be found', required=True)
     parser.add_argument("-m","--modeldir",type=str,help='Path to precalculated model .dict file output from train.py', required=True)
     parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be the same as the k value used in training (train function)', required=True)
+    parser.add_argument("-sl","--streaklen",type=int,help='minimum length of hit sequence that would be considered as a streak, default=20', default=20)
+    parser.add_argument("-gl","--gaplen",type=int,help='maximum length of non-hit region following a hit streak that would be considered as a gap, default=5', default=5)
     parser.add_argument("-name","--outputname",type=str,help='File name for output, useful to include information about the experiment', default='hits')
     parser.add_argument("-dir","--outputdir",type=str,help='Directory to save output dataframe',default='./')
     parser.add_argument("-a","--alphabet",type=str,help='String, Alphabet to generate k-mers (e.g. ATCG)',default='ATCG')
@@ -420,6 +424,8 @@ def console_hmseekr_findhits():
         args.searchpool,
         args.modeldir,
         args.knum,
+        args.streaklen,
+        args.gaplen,
         args.outputname,
         args.outputdir,
         args.alphabet,
@@ -429,12 +435,14 @@ def console_hmseekr_findhits():
     
 
 def console_hmseekr_findhits_condE():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    assert sys.version_info >= (3, 9), "Python version must be 3.9"
     parser = argparse.ArgumentParser(usage=FINDHITS_CONDE_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-pool","--searchpool",type=str,help='Path to fasta file from which the similarity scores to query seq will be calculated and hits seqs be found', required=True)
     parser.add_argument("-m","--modeldir",type=str,help='Path to precalculated model .dict file output from train.py', required=True)
     parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be the same as the k value used in training (train function)', required=True)
+    parser.add_argument("-sl","--streaklen",type=int,help='minimum length of hit sequence that would be considered as a streak, default=20', default=20)
+    parser.add_argument("-gl","--gaplen",type=int,help='maximum length of non-hit region following a hit streak that would be considered as a gap, default=5', default=5)
     parser.add_argument("-name","--outputname",type=str,help='File name for output, useful to include information about the experiment', default='hits')
     parser.add_argument("-dir","--outputdir",type=str,help='Directory to save output dataframe',default='./')
     parser.add_argument("-a","--alphabet",type=str,help='String, Alphabet to generate k-mers (e.g. ATCG)',default='ATCG')
@@ -447,6 +455,8 @@ def console_hmseekr_findhits_condE():
         args.searchpool,
         args.modeldir,
         args.knum,
+        args.streaklen,
+        args.gaplen,
         args.outputname,
         args.outputdir,
         args.alphabet,
@@ -456,7 +466,7 @@ def console_hmseekr_findhits_condE():
 
 
 def console_hmseekr_findhits_nol():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    assert sys.version_info >= (3, 9), "Python version must be 3.9"
     parser = argparse.ArgumentParser(usage=FINDHITS_NOL_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-pool","--searchpool",type=str,help='Path to fasta file from which the similarity scores to query seq will be calculated and hits seqs be found', required=True)
@@ -484,7 +494,7 @@ def console_hmseekr_findhits_nol():
 
 
 def console_hmseekr_gridsearch():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    assert sys.version_info >= (3, 9), "Python version must be 3.9"
     parser = argparse.ArgumentParser(usage=GRIDSEARCH_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-qf","--queryfadir",type=str,help='Path to the fasta file of query sequence or sequence of interest (e.g. functional regions of a ncRNA)', required=True)
@@ -525,7 +535,7 @@ def console_hmseekr_gridsearch():
     
 
 def console_hmseekr_fastarev():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    assert sys.version_info >= (3, 9), "Python version must be 3.9"
     parser = argparse.ArgumentParser(usage=FASTAREV_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-i","--inputdir", type=str,help='Path to input fasta file', required=True)
@@ -540,7 +550,7 @@ def console_hmseekr_fastarev():
     
 
 def console_hmseekr_genbed():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    assert sys.version_info >= (3, 9), "Python version must be 3.9"
     parser = argparse.ArgumentParser(usage=GENBED_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-hd","--hitsdir",type=str,help='path to the input hits file, should be the output from findhits with the regular fasta file as input', required=True)
@@ -561,7 +571,7 @@ def console_hmseekr_genbed():
 
 
 def console_hmseekr_genbedrev():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    assert sys.version_info >= (3, 9), "Python version must be 3.9"
     parser = argparse.ArgumentParser(usage=GENBEDREV_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-hd","--hitsdir",type=str,help='path to the input hits file, should be the output from findhits with the reversed fasta file as input', required=True)
@@ -582,7 +592,7 @@ def console_hmseekr_genbedrev():
 
 
 def console_hmseekr_hitseekr():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    assert sys.version_info >= (3, 9), "Python version must be 3.9"
     parser = argparse.ArgumentParser(usage=HITSEEKR_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-hd","--hitsdir",type=str,help='Path to the hits .txt file that is the output of findhits function', required=True)
@@ -607,7 +617,7 @@ def console_hmseekr_hitseekr():
     
 
 def console_hmseekr_seqstosummary():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9 or higher"
+    assert sys.version_info >= (3, 9), "Python version must be 3.9"
     parser = argparse.ArgumentParser(usage=SEQSTOSUMMARY_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-qf","--queryfadir",type=str,help='Path to the fasta file of query sequences or sequences of interest (e.g. all repeats of Xist)', required=True)
@@ -617,7 +627,8 @@ def console_hmseekr_seqstosummary():
     parser.add_argument("-bkgf","--bkgfadir", type=str,help='Path to the fasta file of bakground sequences for seekr normalization vectors(see manual for details)', required=True)
     parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be one single integer', required=True)
     parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits and findhits_condE', default='findhits_condE')
-    parser.add_argument("-lenf","--lenfilter",type=int,help='only keep hits sequences that have length > lenfilter for calculating stats. must be one single integer, default=25', default=25)
+    parser.add_argument("-li","--lenmin",type=int,help='only keep hits sequences that have length > lenmin for calculating stats. must be one single integer, default=100', default=100)
+    parser.add_argument("-la","--lenmax",type=int,help='only keep hits sequences that have length < lenmax for calculating stats. must be one single integer, default=1000', default=1000)
     parser.add_argument("-llrf","--llrfilter",type=float,help='only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0', default=0.0)
     parser.add_argument("-pf","--pfilter",type=float,help='only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1', default=1.0)
     parser.add_argument("-name","--outputname",type=str,help='File name for output dataframe', default='seqstosummary_results')
@@ -636,7 +647,8 @@ def console_hmseekr_seqstosummary():
         args.bkgfadir,
         args.knum,
         args.func,
-        args.lenfilter,
+        args.lenmin,
+        args.lenmax,
         args.llrfilter,
         args.pfilter,
         args.outputname,

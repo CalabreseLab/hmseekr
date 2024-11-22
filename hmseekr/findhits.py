@@ -11,12 +11,19 @@
 # hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment
 # kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment
 # kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q state minus the log likelihood of them being in the N state
+# user can choose to merge small gaps between hits segments before finalizing the hits dataframe by setting streaklen and gaplen
 
 
 ### Input:
 # searchpool: Path to fasta file which defines the region to search for potential hits (highly similar regions) based on the precalculated model (train function)
 # modeldir: Path to precalculated model .dict file output from train.py'
 # knum: Value of k to use as an integer. Must be the same as the k value used in training (train function) that produced the model
+# streaklen: Integer, minimum length of hit sequence that would be considered as a streak, default=20.
+# gaplen: Integer, maximum length of non-hit region following a hit streak that would be considered as a gap, default=5.
+# if users choose to merge small gaps between hits segments, only hit segments that are greater than streaklen, called hit streak, would be considered
+# for each hit streak, if the following gap is less than gaplen, the gap would be converted as a hit region and merged with the previous hit streak and the following hit sequence (whether it is a streak or not)
+# repeat the process until no more gaps can be merged
+# if users choose not to merge small gaps between hits segments, and report all hits as they are, set gaplen to 0
 # outputname: File name for output, useful to include information about the experiment, default='hits'
 # outputdir: path of output directory to save output dataframe, default is current directory
 # alphabet: String, Alphabet to generate k-mers default='ATCG'
@@ -33,7 +40,8 @@
 
 # testhits = findhits(searchpool='../fastaFiles/pool.fa',
 #                     modeldir='../markovModels/hmm.dict',
-#                     knum=4,outputname='hits',outputdir='./',
+#                     knum=4,streaklen=20, gaplen=5, 
+#                     outputname='hits',outputdir='./',
 #                     alphabet='ATCG',fasta=True,
 #                     progressbar=True)
 
@@ -131,8 +139,58 @@ from tqdm import tqdm
 import os
 
 
+# if in groupedHits, there is '+' string that is greater than streaklen, and '-' string that is less than gaplen
+# for '+' string that is greater than streaklen, check the following '-' string
+# if the '-' string is less than gaplen, change the '-' string to '+'
+# merge the '+' streak, the converted '-' string, and the following '+' string
+# repeat the process until no more '-' string can be converted
 
-def hmmCalc(tHead,tSeq,hmm,k):
+def process_grouped_hits(groupedHits, streaklen, gaplen):
+    # Make a copy of the input list to avoid modifying the original
+    groupedHits_copy = groupedHits.copy()
+    
+    # Check for any '+' string longer than streaklen
+    has_long_plus = any(s.startswith('+') and len(s) > streaklen for s in groupedHits_copy)
+    # Check for any '-' string shorter than gaplen
+    has_short_minus = any(s.startswith('-') and len(s) < gaplen for s in groupedHits_copy)
+
+    # If either condition is not met, return the copied list as is
+    if not (has_long_plus and has_short_minus):
+        return groupedHits_copy
+
+    changed = True
+    while changed:
+        changed = False
+        i = 0
+        while i < len(groupedHits_copy) - 1:
+            s_current = groupedHits_copy[i]
+            s_next = groupedHits_copy[i+1]
+
+            if s_current.startswith('+') and len(s_current) > streaklen:
+                if s_next.startswith('-') and len(s_next) < gaplen:
+                    # Check if there is a next '+' string to merge
+                    if i+2 < len(groupedHits_copy):
+                        s_next_next = groupedHits_copy[i+2]
+                        if s_next_next.startswith('+'):
+                            # Convert the short '-' string to '+' and merge
+                            s_next_converted = '+' * len(s_next)
+                            new_plus = s_current + s_next_converted + s_next_next
+                            groupedHits_copy[i] = new_plus
+                            # Remove the next two entries
+                            del groupedHits_copy[i+1:i+3]
+                            changed = True
+                            continue
+                # Move to the next index only if no changes were made
+                i += 1
+            else:
+                i += 1
+    return groupedHits_copy
+
+
+
+
+
+def hmmCalc(tHead,tSeq,hmm,k,streaklen=20,gaplen=5):
     #tHead,tSeq = data
     O,oIdx,nBP = corefunctions.kmersWithAmbigIndex(tSeq,k)
     A,E,states,pi= hmm['A'],hmm['E'],hmm['states'],hmm['pi']
@@ -142,7 +200,11 @@ def hmmCalc(tHead,tSeq,hmm,k):
     mergedTrack = coordBTrack + nBP # add back in ambig locations
     mergedTrack.sort(key=itemgetter(0)) # sort master list by index
     hmmTrack = [i[1] for i in mergedTrack] # fetch just state label from mergedTrack ['-','+',...,'+']
-    groupedHits = corefunctions.groupHMM(hmmTrack) # ['-----','++++++++++','-','++++','------------']
+    groupedHits_raw = corefunctions.groupHMM(hmmTrack) # ['-----','++++++++++','-','++++','------------']
+    # merge the gaps inbwteen the '+' streaks
+
+    groupedHits = process_grouped_hits(groupedHits_raw, streaklen, gaplen)
+
 
     # Return sequences of HMM hits, and their start and end locations in the original sequence
     seqHits,starts,ends = corefunctions.formatHits(groupedHits,k,tSeq)
@@ -158,7 +220,7 @@ def hmmCalc(tHead,tSeq,hmm,k):
 
 
 
-def findhits(searchpool,modeldir,knum,outputname='hits',outputdir='./',alphabet='ATCG',fasta=True,progressbar=True):
+def findhits(searchpool,modeldir,knum,streaklen=20,gaplen=5,outputname='hits',outputdir='./',alphabet='ATCG',fasta=True,progressbar=True):
 
     #Loop over values of k
     alphabet = alphabet.upper()
@@ -193,7 +255,7 @@ def findhits(searchpool,modeldir,knum,outputname='hits',outputdir='./',alphabet=
     # Loop through data_pairs with a progress bar
     for header, seq in iterable:
         # Call hmmCalc and get returned header and value
-        theader, value = hmmCalc(header, seq, hmm, k)
+        theader, value = hmmCalc(header, seq, hmm, k, streaklen, gaplen)
         
         # Assign the value to the corresponding header in your dictionary
         dataDict[theader] = value
