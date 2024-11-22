@@ -135,22 +135,24 @@ testmodel = train(querydir='./counts/repeatA.dict', nulldir='./counts/all_lncRNA
 
 ### findhits: find high similar regions based on kmer profile within sequences of interest
 
-This step uses precalculated model (emission matrix, prepared transition matrix, pi and states) from train (hmseekr_train) function to find out HMM state path through sequences of interest, therefore return sequences that has high similarity (based on kmer profile) to the query sequence -- hits sequneces. This function takes in a fasta file (searchpool) which defines the region to search for potential hits (highly similar regions to the query sequence), also takes in the precalculated model (train or hmseekr_train function). Along the searchpool fasta sequences, similarity scores to query sequence will be calculated based on the model, hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment, kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment. kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q (query) state minus the log likelihood of them being in the N (null) state
+This step uses precalculated model (emission matrix, prepared transition matrix, pi and states) from train (hmseekr_train) function to find out HMM state path through sequences of interest, therefore return sequences that has high similarity (based on kmer profile) to the query sequence -- hits sequneces. This function takes in a fasta file (searchpool) which defines the region to search for potential hits (highly similar regions to the query sequence), also takes in the precalculated model (train or hmseekr_train function). Along the searchpool fasta sequences, similarity scores to query sequence will be calculated based on the model, hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment, kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment. kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q (query) state minus the log likelihood of them being in the N (null) state. Users can choose to merge small gaps between hits segments before finalizing the hits dataframe by setting streaklen and gaplen.
+
 
 #### Console Example:
-use the previously trained model (hmm.dict by train/hmseekr_train function) to search for highly similar regions to query sequence (repeatA) within the pool.fa files (area of interest region to find sequences similar to repeatA, could be all lncRNAs or just chromosome 6) with kmer size 4 and save the hit sequences while showing progress bar
+use the previously trained model (hmm.dict by train/hmseekr_train function) to search for highly similar regions to query sequence (repeatA) within the pool.fa files (area of interest region to find sequences similar to repeatA, could be all lncRNAs or just chromosome 6) with kmer size 4 and save the hit sequences while showing progress bar, merge non-hit gap that is smaller than 5nt that follows a hit region that is longer than 20nt.
 ```
-hmseekr_findhits -pool './fastaFiles/pool.fa' -m './markovModels/repeatA_lncRNA/4/hmm.dict' -k 4 -name 'hits' -dir './models/' -a 'ATCG' -fa -pb
+hmseekr_findhits -pool './fastaFiles/pool.fa' -m './markovModels/repeatA_lncRNA/4/hmm.dict' -k 4 -sl 20 -gl 5 -name 'hits' -dir './models/' -a 'ATCG' -fa -pb
 ```
 
 #### Python Example:
-use the previously trained model (hmm.dict by train/hmseekr_train function) to search for highly similar regions to query sequence (repeatA) within the pool.fa files (area of interest region to find sequences similar to repeatA, could be all lncRNAs or just chromosome 6) with kmer size 4 and save the hit sequences while showing progress bar
+use the previously trained model (hmm.dict by train/hmseekr_train function) to search for highly similar regions to query sequence (repeatA) within the pool.fa files (area of interest region to find sequences similar to repeatA, could be all lncRNAs or just chromosome 6) with kmer size 4 and save the hit sequences while showing progress bar, merge non-hit gap that is smaller than 5nt that follows a hit region that is longer than 20nt.
 ```python
 from hmseekr.findhits import findhits
 
 testhits = findhits(searchpool='./fastaFiles/pool.fa',
                     modeldir='./markovModels/repeatA_lncRNA/4/hmm.dict',
-                    knum=4,outputname='hits',outputdir='./',
+                    knum=4,streaklen=20,gaplen=5,
+                    outputname='hits',outputdir='./',
                     alphabet='ATCG',fasta=True,
                     progressbar=True)
 ```
@@ -160,11 +162,13 @@ testhits = findhits(searchpool='./fastaFiles/pool.fa',
 1. searchpool (-pool): Path to fasta file which defines the region to search for potential hits (highly similar regions) based on the precalculated model (train function)
 2. modeldir (-m): Path to precalculated model .dict file output from train.py'
 3. knum (-k): Value of k to use as an integer. Must be the same as the k value used in training (train function) that produced the model
-4. outputname (-name): File name for output, useful to include information about the experiment, default='hits'
-5. outputdir (-dir): Directory to save output dataframe. Default is './', that is current directory.
-6. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
-7. fasta (-fa): whether to save sequence of hit in the output dataframe, default=True: save the actual sequences
-8. progressbar (-pb): whether to show progress bar
+4. streaklen (-sl): Integer, minimum length of hit sequence that would be considered as a streak, default=20.
+5. gaplen (-gl): Integer, maximum length of non-hit region following a hit streak that would be considered as a gap, default=5. If users choose to merge small gaps between hits segments, only hit segments that are greater than streaklen, called hit streak, would be considered. For each hit streak, if the following gap is less than gaplen, the gap would be converted as a hit region and merged with the previous hit streak and the following hit sequence (whether it is a streak or not). Repeat the process until no more gaps can be merged. If users choose not to merge small gaps between hits segments, and report all hits as they are, set gaplen to 0.
+6. outputname (-name): File name for output, useful to include information about the experiment, default='hits'
+7. outputdir (-dir): Directory to save output dataframe. Default is './', that is current directory.
+8. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
+9. fasta (-fa): whether to save sequence of hit in the output dataframe, default=True: save the actual sequences
+10. progressbar (-pb): whether to show progress bar
 
 #### Output:
 A dataframe containing information about the hit regions: highly similar regions to query sequence based on the precalculated model within the input fasta file. Information about the hits regions includes: the sequence header from the input fasta file, start and end location of the hit segment, kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment if fasta=True.
@@ -192,7 +196,8 @@ from hmseekr.findhits_condE import findhits_condE
 
 testhits = findhits_condE(searchpool='../fastaFiles/pool.fa',
                           modeldir='../markovModels/hmm.dict',
-                          knum=4,outputname='hits',outputdir='./',
+                          knum=4,streaklen=20,gaplen=5,
+                          outputname='hits',outputdir='./',
                           alphabet='ATCG',fasta=True,
                           progressbar=True)
 ```
@@ -459,8 +464,8 @@ outputname is automatically generated as the input findhits filename with '\_see
 
 ### seqstosummary: search and quantify multiple features
 
-This function is designed to get the overall likeliness of each search pool sequence to the query sequences. The function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file (for hmseekr) and a background fasta file (for seekr). Here the transition probability dataframe must have the same rows as the query fasta file. The columns should be '\[qT,nT\]' where qT is the probability of query to query transition, nT is the probability of null to null transition The transition prbability for each query sequence can be different and can be optimized by the gridsearch function. Please include 'qT' and 'nT' as the first row (the column names) for the two columns in the csv file. Please check the transdf.csv file in the repository for an example. Users can also choose to set the transition probability to be the same for all query sequences. The function will run the kmers, train, findhits and hitseekr functions for each query sequence. Then the results can be filtered by the length of the hit regions, the kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value. Finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence, and also the sum of kmerLLR and length, and median of kmerLLR and seekr pval for all the counts of a search pool sequence with each the query sequences. For long format each row of the output dataframe contains a sequence in the search pool fasta, and has seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; len_sum is the sum of the length of all counts of a search pool sequence with the query sequences; LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences
-For wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median. The output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
+This function is designed to get the overall likeliness of each search pool sequence to the query sequences. The function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file (for hmseekr) and a background fasta file (for seekr). Here the transition probability dataframe must have the same rows as the query fasta file. The columns should be '\[qT,nT\]' where qT is the probability of query to query transition, nT is the probability of null to null transition The transition prbability for each query sequence can be different and can be optimized by the gridsearch function. Please include 'qT' and 'nT' as the first row (the column names) for the two columns in the csv file. Please check the transdf.csv file in the repository for an example. Users can also choose to set the transition probability to be the same for all query sequences. The function will run the kmers, train, findhits and hitseekr functions for each query sequence. Then the results can be filtered by the length of the hit regions, the kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value. Finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence, and also the sum of kmerLLR and length, and median of kmerLLR and seekr pval, and the minimal seekr pval for all the counts of a search pool sequence with each the query sequences. For long format each row of the output dataframe contains a sequence in the search pool fasta, and has eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; len_sum is the sum of the length of all counts of a search pool sequence with the query sequences; LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences; pval_min is the minimum of seekr pearson correlation p value for each search pool sequence with the query sequences
+For wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min. The output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
 
 
 
@@ -468,7 +473,7 @@ For wide format: each row of the output dataframe corresponds to a sequence in t
 search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E
 
 ```
-hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -lenf 25 -llrf 0 -pf 1 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
+hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -li 100 -la 1000 -llrf 0 -pf 1 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
 ```
 
 #### Python Example:
@@ -483,7 +488,7 @@ testsum = seqstosummary(queryfadir='./fastaFiles/mXist_repeats.fa',
                         searchpool='./fastaFiles/chr16.fa',
                         bkgfadir='./all_lncRNA.fa',
                         knum=4, func='findhits_condE',
-                        lenfilter=25,llrfilter=0, pfilter=1,
+                        lenmin=100, lenmax=1000, llrfilter=0, pfilter=1,
                         outputname='seqstosummary_results', 
                         outputdir='/Users/shuang/seqstosummary/', 
                         outdfformat='long', alphabet='ATCG', progressbar=True)
@@ -498,17 +503,18 @@ testsum = seqstosummary(queryfadir='./fastaFiles/mXist_repeats.fa',
 5. bkgfadir (-bkgf): fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function. This fasta file can be different from the nullfadir fasta file
 6. knum (-k): a single integer value for kmer number
 7. func (-fc): the function to use for finding hits, default='findhits_condE', other options include 'findhits'
-8. lenfilter (-lenf): only keep hits sequences that have length > lenfilter for calculating stats in the output, default=25. if no filter is needed, set to 0
-9. llrfilter (-llrf): only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0. if no filter is needed, set to 0. kmerLLR is the log likelihood ratio of of the probability that the set of k-mers y within a hit derived from the QUERY versus the NULL state. It is the sum of the log2(Q/N) ratio for each kmer within a hit. 
-10. pfilter (-pf): only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1. if no filter is needed, set to 1
-11. outputname (-name): File name for output dataframe, default='seqstosummary_results'
-12. outputdir (-dir): path of output directory to save outputs and intermediate files, default is a subfolder called seqstosummary under current directory. The intermediate fasta seq files, count files, trained models and hits files are automatically saved under the outputdir into subfolders: seqs, counts, models, hits, where qT and nT are included in the file names
-13. outdfformat (-format): the format of the output dataframe, default='long', other option is 'wide'
-14. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
-15. progressbar (-pb): whether to show progress bar, default=True: show progress bar
+8. lenmin (-li): only keep hits sequences that have length > lenmin for calculating stats in the output, default=100. if no filter is needed, set to 0
+9. lenmax (-la): only keep hits sequences that have length < lenmax for calculating stats in the output, default=1000. 
+10. llrfilter (-llrf): only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0. if no filter is needed, set to 0. kmerLLR is the log likelihood ratio of of the probability that the set of k-mers y within a hit derived from the QUERY versus the NULL state. It is the sum of the log2(Q/N) ratio for each kmer within a hit. 
+11. pfilter (-pf): only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1. if no filter is needed, set to 1
+12. outputname (-name): File name for output dataframe, default='seqstosummary_results'
+13. outputdir (-dir): path of output directory to save outputs and intermediate files, default is a subfolder called seqstosummary under current directory. The intermediate fasta seq files, count files, trained models and hits files are automatically saved under the outputdir into subfolders: seqs, counts, models, hits, where qT and nT are included in the file names
+14. outdfformat (-format): the format of the output dataframe, default='long', other option is 'wide'
+15. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
+16. progressbar (-pb): whether to show progress bar, default=True: show progress bar
 
 #### Output:
-a dataframe in long format: where each row contains a sequence in the search pool fasta file, and seven columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; len_sum is the sum of the length of all counts of a search pool sequence with the query sequences; LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences. In wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta, and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median
+a dataframe in long format: where each row contains a sequence in the search pool fasta file, and eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; len_sum is the sum of the length of all counts of a search pool sequence with the query sequences; LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences; pval_min is the minimum of seekr pearson correlation p value for each search pool sequence with the query sequences. In wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta, and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min.
 
 
 
