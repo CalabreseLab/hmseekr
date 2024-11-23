@@ -90,7 +90,7 @@ user can choose to merge small gaps between hits segments before finalizing the 
 Example:
 use the previously trained model (hmm.dict by hmseekr_train function) to search for highly similar regions to query seq (repeatA)
 within the pool.fa files (area of interest region to find sequences similar to query, could be all lncRNAs or just chromosome 6) 
-with kmer size 4 and save the hit sequences while showing progress bar
+with kmer size 4 and save the hit sequences while showing progress bar, merge non-hit gap that is smaller than 5nt that follows a hit region that is longer than 20nt.
     $ hmseekr_findhits -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -sl 20 -gl 5 -name 'hits' -dir './models/'  -a 'ATCG' -fa -pb
 
 minimal code with all settings to default
@@ -177,13 +177,14 @@ as there are iterations of train and findhits functions, which could take long t
 variants of findhits functions can be specified to run
 
 Example:
-perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99 with step of 0.01 with lengthfilter set to 25
-which only keep the hit sequences with length greater than 100 and less than 1000 for stats calculation. the regular findhits function is used
-    $ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.01 -nl 0.9,0.99,0.01 -step -fc 'findhits' -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
+perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99 with step of 0.01, no merge of non-hit gap, 
+and only keep the hit sequences with length greater than 100 and less than 1000 for stats calculation. the regular findhits function is used
+    $ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.01 -nl 0.9,0.99,0.01 -step -fc 'findhits' -sl 25 -gl 0 -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
 
-perform a grid search to find the best transition probabilities for qT and nT each exactly as 0.9,0.99,0.999, filtering and keep hit sqeuences with length greater than 100 and less than 1000 for stats calculation. 
-the regular findhits function is used
-    $ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.999 -nl 0.9,0.99,0.999 -fc 'findhits' -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
+perform a grid search to find the best transition probabilities for qT and nT each exactly as 0.9,0.99,0.999, merge non-hit gap that is smaller than 5nt that follows a hit region that is longer than 50nt.
+filtering and keep hit sqeuences with length greater than 100 and less than 1000 for stats calculation. 
+the conditioned Emission 'findhits_condE' function is used
+    $ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.999 -nl 0.9,0.99,0.999 -fc 'findhits_condE' -sl 50 -gl 5 -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
 
 
 For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
@@ -333,8 +334,10 @@ the output dataframe can then be used to generalize an overall likeliness of eac
 
 
 Example:
-search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E
-    $ hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -li 100 -la 1000 -llrf 0 -pf 1 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
+search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E, merge non-hit gap that is smaller than 5nt that follows a hit region that is longer than 50nt.
+filtering and keep hit sqeuences with length greater than 100 and less than 1000, kmerLLR greater than 0 and p val less than 0.5 for stats calculation. 
+the conditioned emission findhits_condE function is used
+    $ hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -sl 50 -gl 5 -li 100 -la 1000 -llrf 0 -pf 0.5 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
 
 
 For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
@@ -410,8 +413,8 @@ def console_hmseekr_findhits():
     parser.add_argument("-pool","--searchpool",type=str,help='Path to fasta file from which the similarity scores to query seq will be calculated and hits seqs be found', required=True)
     parser.add_argument("-m","--modeldir",type=str,help='Path to precalculated model .dict file output from train.py', required=True)
     parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be the same as the k value used in training (train function)', required=True)
-    parser.add_argument("-sl","--streaklen",type=int,help='minimum length of hit sequence that would be considered as a streak, default=20', default=20)
-    parser.add_argument("-gl","--gaplen",type=int,help='maximum length of non-hit region following a hit streak that would be considered as a gap, default=5', default=5)
+    parser.add_argument("-sl","--streaklen",type=int,help='minimum length of hit sequence that would be considered as a streak, default=25', default=25)
+    parser.add_argument("-gl","--gaplen",type=int,help='maximum length of non-hit region following a hit streak that would be considered as a gap, default=0 means no gap merging', default=0)
     parser.add_argument("-name","--outputname",type=str,help='File name for output, useful to include information about the experiment', default='hits')
     parser.add_argument("-dir","--outputdir",type=str,help='Directory to save output dataframe',default='./')
     parser.add_argument("-a","--alphabet",type=str,help='String, Alphabet to generate k-mers (e.g. ATCG)',default='ATCG')
@@ -441,8 +444,8 @@ def console_hmseekr_findhits_condE():
     parser.add_argument("-pool","--searchpool",type=str,help='Path to fasta file from which the similarity scores to query seq will be calculated and hits seqs be found', required=True)
     parser.add_argument("-m","--modeldir",type=str,help='Path to precalculated model .dict file output from train.py', required=True)
     parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be the same as the k value used in training (train function)', required=True)
-    parser.add_argument("-sl","--streaklen",type=int,help='minimum length of hit sequence that would be considered as a streak, default=20', default=20)
-    parser.add_argument("-gl","--gaplen",type=int,help='maximum length of non-hit region following a hit streak that would be considered as a gap, default=5', default=5)
+    parser.add_argument("-sl","--streaklen",type=int,help='minimum length of hit sequence that would be considered as a streak, default=25', default=25)
+    parser.add_argument("-gl","--gaplen",type=int,help='maximum length of non-hit region following a hit streak that would be considered as a gap, default=0 means no gap merging', default=0)
     parser.add_argument("-name","--outputname",type=str,help='File name for output, useful to include information about the experiment', default='hits')
     parser.add_argument("-dir","--outputdir",type=str,help='Directory to save output dataframe',default='./')
     parser.add_argument("-a","--alphabet",type=str,help='String, Alphabet to generate k-mers (e.g. ATCG)',default='ATCG')
@@ -506,6 +509,8 @@ def console_hmseekr_gridsearch():
     parser.add_argument("-nl","--nTlist",type=str,help="Comma delimited string of possible nT (null to null transition) values. For example, 0.1,0.9,0.05 or 0.9,0.99,0.999", required=True)
     parser.add_argument("-step","--stepmode",action='store_true',help='when called, stepping mode will be applied in generating qT and nT values from qTlist and nTlist (min, max, step); if omitted, qT and nT values will be directly used from qTlist and nTlist')
     parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits and findhits_condE', default='findhits_condE')
+    parser.add_argument("-sl","--streaklen",type=int,help='minimum length of hit sequence that would be considered as a streak, default=25', default=25)
+    parser.add_argument("-gl","--gaplen",type=int,help='maximum length of non-hit region following a hit streak that would be considered as a gap, default=0 means no gap merging', default=0)
     parser.add_argument("-li","--lenmin",type=int,help='keep hits sequences that have length > lenmin, must be one single integer', default=100)
     parser.add_argument("-la","--lenmax",type=int,help='keep hits sequences that have length < lenmax, must be one single integer', default=1000)
     parser.add_argument("-name","--outputname",type=str,help='File name for output dataframe', default='gridsearch_results')
@@ -525,6 +530,8 @@ def console_hmseekr_gridsearch():
         args.nTlist,
         args.stepmode,
         args.func,
+        args.streaklen,
+        args.gaplen,
         args.lenmin,
         args.lenmax,
         args.outputname,
@@ -627,6 +634,8 @@ def console_hmseekr_seqstosummary():
     parser.add_argument("-bkgf","--bkgfadir", type=str,help='Path to the fasta file of bakground sequences for seekr normalization vectors(see manual for details)', required=True)
     parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be one single integer', required=True)
     parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits and findhits_condE', default='findhits_condE')
+    parser.add_argument("-sl","--streaklen",type=int,help='minimum length of hit sequence that would be considered as a streak, default=25', default=25)
+    parser.add_argument("-gl","--gaplen",type=int,help='maximum length of non-hit region following a hit streak that would be considered as a gap, default=0 means no gap merging', default=0)
     parser.add_argument("-li","--lenmin",type=int,help='only keep hits sequences that have length > lenmin for calculating stats. must be one single integer, default=100', default=100)
     parser.add_argument("-la","--lenmax",type=int,help='only keep hits sequences that have length < lenmax for calculating stats. must be one single integer, default=1000', default=1000)
     parser.add_argument("-llrf","--llrfilter",type=float,help='only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0', default=0.0)
@@ -647,6 +656,8 @@ def console_hmseekr_seqstosummary():
         args.bkgfadir,
         args.knum,
         args.func,
+        args.streaklen,
+        args.gaplen,
         args.lenmin,
         args.lenmax,
         args.llrfilter,

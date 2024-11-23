@@ -48,6 +48,12 @@
 # this fasta file can be different from the nullfadir fasta file
 # knum: a single integer value for kmer number
 # func: the function to use for finding hits, default='findhits_condE', other options include 'findhits'
+# streaklen: Integer, minimum length of hit sequence that would be considered as a streak, default=25.
+# gaplen: Integer, maximum length of non-hit region following a hit streak that would be considered as a gap, default=0 means no gap merging.
+# if users choose to merge small gaps between hits segments, only hit segments that are greater than streaklen, called hit streak, would be considered
+# for each hit streak, if the following gap is less than gaplen, the gap would be converted as a hit region and merged with the previous hit streak and the following hit sequence (whether it is a streak or not)
+# repeat the process until no more gaps can be merged
+# if users choose not to merge small gaps between hits segments, and report all hits as they are, set gaplen to 0
 # lenmin: only keep hits sequences that have length > lenmin for calculating stats in the output, default=100. if no filter is needed, set to 0
 # lenmax: only keep hits sequences that have length < lenmax for calculating stats in the output, default=1000. 
 # llrfilter: only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0. if no filter is needed, set to 0
@@ -86,7 +92,7 @@
 #                         nullfadir='/Users/shuang/mSEEKR/fastaFiles/mm10_exp_map_200.fa', 
 #                         searchpool='/Users/shuang/mSEEKR/fastaFiles/pool.fa',
 #                         bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',
-#                         knum=4, func='findhits_condE',
+#                         knum=4, func='findhits_condE',streaklen=25,gaplen=0,
 #                         lenmin=100, lenmax=1000 ,llrfilter=0, pfilter=1,
 #                         outputname='seqstosummary_results', 
 #                         outputdir='/Users/shuang/seqstosummary/', 
@@ -112,9 +118,10 @@ from tqdm import tqdm
 
 
 def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
-                  func='findhits_condE', lenmin=100, lenmax=1000, llrfilter=0, pfilter=1,
-                  outputname='seqstosummary_results',outputdir='./seqstosummary/', 
-                  outdfformat='long',alphabet='ATCG', progressbar=True):
+                  func='findhits_condE', streaklen=25,gaplen=0, lenmin=100, lenmax=1000, 
+                  llrfilter=0, pfilter=1,outputname='seqstosummary_results',
+                  outputdir='./seqstosummary/',outdfformat='long',alphabet='ATCG', 
+                  progressbar=True):
     
     # read in the query fasta file
     queryseqs = seekrReader(queryfadir).get_seqs()
@@ -250,7 +257,7 @@ def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
 
         # find hits
         print('Finding hits for query sequence',i+1)
-        hits = findhits_cur(searchpool=searchpool, modeldir=modeldir, knum=knum, outputname=f'query{i}hits_q{qTvec[i]}_n{nTvec[i]}', outputdir=hitsfd, alphabet=alphabet, fasta=True, progressbar=progressbar)
+        hits = findhits_cur(searchpool=searchpool, modeldir=modeldir, knum=knum, streaklen=streaklen, gaplen=gaplen, outputname=f'query{i}hits_q{qTvec[i]}_n{nTvec[i]}', outputdir=hitsfd, alphabet=alphabet, fasta=True, progressbar=progressbar)
 
         # hitseekr, do not use the function as we can recycle the bkg norm vecs and model fits
 

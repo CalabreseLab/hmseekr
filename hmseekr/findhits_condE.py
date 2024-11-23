@@ -23,8 +23,8 @@
 # searchpool: Path to fasta file which defines the region to search for potential hits (highly similar regions) based on the precalculated model (train function)
 # modeldir: Path to precalculated model .dict file output from train.py'
 # knum: Value of k to use as an integer. Must be the same as the k value used in training (train function) that produced the model
-# streaklen: Integer, minimum length of hit sequence that would be considered as a streak, default=20.
-# gaplen: Integer, maximum length of non-hit region following a hit streak that would be considered as a gap, default=5.
+# streaklen: Integer, minimum length of hit sequence that would be considered as a streak, default=25.
+# gaplen: Integer, maximum length of non-hit region following a hit streak that would be considered as a gap, default=0 means no gap merging.
 # if users choose to merge small gaps between hits segments, only hit segments that are greater than streaklen, called hit streak, would be considered
 # for each hit streak, if the following gap is less than gaplen, the gap would be converted as a hit region and merged with the previous hit streak and the following hit sequence (whether it is a streak or not)
 # repeat the process until no more gaps can be merged
@@ -325,7 +325,7 @@ def process_grouped_hits(groupedHits, streaklen, gaplen):
 
 
 
-def hmmCalc_new(tHead,tSeq,hmm,k,alphabet,streaklen=20,gaplen=5):
+def hmmCalc_new(tHead,tSeq,hmm,k,alphabet,streaklen=25,gaplen=0):
     #tHead,tSeq = data
     O,oIdx,nBP = corefunctions.kmersWithAmbigIndex(tSeq,k)
     A,E,states,pi= hmm['A'],hmm['E'],hmm['states'],hmm['pi']
@@ -384,7 +384,7 @@ def condition_E(E,alphabet):
 
 
 
-def findhits_condE(searchpool,modeldir,knum,streaklen=20,gaplen=5,outputname='hits',outputdir='./',alphabet='ATCG',fasta=True,progressbar=True):
+def findhits_condE(searchpool,modeldir,knum,streaklen=25,gaplen=0,outputname='hits',outputdir='./',alphabet='ATCG',fasta=True,progressbar=True):
 
     #Loop over values of k
     alphabet = alphabet.upper()

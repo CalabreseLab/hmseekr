@@ -36,6 +36,12 @@
 # nTlist: specify probability of null to null transition. the setting is the same as in qTlist.
 # stepmode: True or False, defines whether to use the qTlist and nTlist as min, max, step or as a list of values for qT and nT. Default is True: use qTlist and nTlist as min, max, step.
 # func: the function to use for finding hits, default='findhits_condE', other options include 'findhits' 
+# streaklen: Integer, minimum length of hit sequence that would be considered as a streak, default=25.
+# gaplen: Integer, maximum length of non-hit region following a hit streak that would be considered as a gap, default=0 means no gap merging.
+# if users choose to merge small gaps between hits segments, only hit segments that are greater than streaklen, called hit streak, would be considered
+# for each hit streak, if the following gap is less than gaplen, the gap would be converted as a hit region and merged with the previous hit streak and the following hit sequence (whether it is a streak or not)
+# repeat the process until no more gaps can be merged
+# if users choose not to merge small gaps between hits segments, and report all hits as they are, set gaplen to 0
 # lenmin: keep hits sequences that have length > lenmin for calculating stats in the output, default=100. 
 # lenmax: keep hits sequences that have length < lenmax for calculating stats in the output, default=1000.
 # outputname: File name for output dataframe, default='gridsearch_results'
@@ -58,7 +64,7 @@
 #                         searchpool='../fastaFiles/pool.fa',
 #                         bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',knum=4, 
 #                         qTlist='0.9,0.99,0.05', nTlist='0.99,0.999,0.005', stepmode=True,
-#                         func='findhits',lenmin=25, lenmax=2000,
+#                         func='findhits',streaklen=25,gaplen=0,lenmin=25, lenmax=2000, 
 #                         outputname='gridsearch_results', 
 #                         outputdir='/Users/shuang/gridsearch/', 
 #                         alphabet='ATCG', progressbar=True)
@@ -69,7 +75,7 @@
 #                         searchpool='../fastaFiles/pool.fa',
 #                         bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',knum=4, 
 #                         qTlist='0.9,0.99,0.999', nTlist='0.99,0.996,0.999', stepmode=False,
-#                         func='findhits_condE',lenmin=25, lenmax=2000,
+#                         func='findhits_condE',streaklen=25,gaplen=0,lenmin=25, lenmax=2000,
 #                         outputname='gridsearch_results', 
 #                         outputdir='/Users/shuang/gridsearch/', 
 #                         alphabet='ATCG', progressbar=True)
@@ -92,9 +98,9 @@ from tqdm import tqdm
 
 def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
                qTlist, nTlist, stepmode=True,
-               func='findhits_condE', lenmin=100, lenmax=1000,
-               outputname='gridsearch_results',outputdir='./gridsearch/',  
-               alphabet='ATCG', progressbar=True):
+               func='findhits_condE', streaklen=25,gaplen=0,
+               lenmin=100, lenmax=1000,outputname='gridsearch_results',
+               outputdir='./gridsearch/',alphabet='ATCG', progressbar=True):
 
     # Check if specified directory exists
     # create new directory if not existing
@@ -305,7 +311,7 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
             if not os.path.exists(f'{newDir}hits/'):
                 os.mkdir(f'{newDir}hits/')
             # find the hits
-            hits = findhits_cur(searchpool=searchpool, modeldir=modeldir, knum=knum, outputname=f'hits_q{qT}_n{nT}', outputdir=hitsdir, alphabet=alphabet, fasta=True, progressbar=False)
+            hits = findhits_cur(searchpool=searchpool, modeldir=modeldir, knum=knum, streaklen=streaklen, gaplen=gaplen, outputname=f'hits_q{qT}_n{nT}', outputdir=hitsdir, alphabet=alphabet, fasta=True, progressbar=False)
             # only keep the rows in hits if Length is within the range of lenmin and lenmax
             hits = hits[(hits['Length']>lenmin) & (hits['Length']<lenmax)]
 
