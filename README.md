@@ -162,8 +162,8 @@ testhits = findhits(searchpool='./fastaFiles/pool.fa',
 1. searchpool (-pool): Path to fasta file which defines the region to search for potential hits (highly similar regions) based on the precalculated model (train function)
 2. modeldir (-m): Path to precalculated model .dict file output from train.py'
 3. knum (-k): Value of k to use as an integer. Must be the same as the k value used in training (train function) that produced the model
-4. streaklen (-sl): Integer, minimum length of hit sequence that would be considered as a streak, default=20.
-5. gaplen (-gl): Integer, maximum length of non-hit region following a hit streak that would be considered as a gap, default=5. If users choose to merge small gaps between hits segments, only hit segments that are greater than streaklen, called hit streak, would be considered. For each hit streak, if the following gap is less than gaplen, the gap would be converted as a hit region and merged with the previous hit streak and the following hit sequence (whether it is a streak or not). Repeat the process until no more gaps can be merged. If users choose not to merge small gaps between hits segments, and report all hits as they are, set gaplen to 0.
+4. streaklen (-sl): Integer, minimum length of hit sequence that would be considered as a streak, default=25.
+5. gaplen (-gl): Integer, maximum length of non-hit region following a hit streak that would be considered as a gap, default=0 means no gap merging. If users choose to merge small gaps between hits segments, only hit segments that are greater than streaklen, called hit streak, would be considered. For each hit streak, if the following gap is less than gaplen, the gap would be converted as a hit region and merged with the previous hit streak and the following hit sequence (whether it is a streak or not). Repeat the process until no more gaps can be merged. If users choose not to merge small gaps between hits segments, and report all hits as they are, set gaplen to 0. For example, a sequence with the following status '+':hit, '-':non-hit, '++++++++++---+++++'would be converted into '++++++++++++++++++' when streaklen=8 and gaplen=2.
 6. outputname (-name): File name for output, useful to include information about the experiment, default='hits'
 7. outputdir (-dir): Directory to save output dataframe. Default is './', that is current directory.
 8. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
@@ -254,21 +254,21 @@ This function performs a grid search to find the best trasnition probabilities f
 
 
 #### Console Example:
-perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99 with step of 0.01 and only keep the hit sequences with length greater than 100nt and less than 1000nt for stats calculation. the regular 'findhits' function is used here.
+perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99 with step of 0.01, no merge of non-hit gap, and only keep the hit sequences with length greater than 100nt and less than 1000nt for stats calculation. the regular 'findhits' function is used here.
 
 ```
-hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.01 -nl 0.9,0.99,0.01 -step -fc 'findhits' -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
+hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.01 -nl 0.9,0.99,0.01 -step -fc 'findhits' -sl 25 -gl 0 -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
 ```
 
 
-perform a grid search to find the best transition probabilities for qT and nT each exactly as 0.9,0.99,0.999 and only keep the hit sequences with length greater than 100nt and less than 1000nt for stats calculation. the conditioned Emission 'findhits_condE' function is used here.
+perform a grid search to find the best transition probabilities for qT and nT each exactly as 0.9,0.99,0.999, merge non-hit gap that is smaller than 5nt that follows a hit region that is longer than 50nt, and only keep the hit sequences with length greater than 100nt and less than 1000nt for stats calculation. the conditioned Emission 'findhits_condE' function is used here.
 
 ```
-hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.999 -nl 0.9,0.99,0.999 -fc 'findhits_condE' -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
+hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.999 -nl 0.9,0.99,0.999 -fc 'findhits_condE' -sl 50 -gl 5 -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
 ```
 
 #### Python Example:
-perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99 and only keep the hit sequences with length greater than 100nt and less than 1000nt for stats calculation. the regular 'findhits' function is used here.
+perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99, no merge of non-hit gap, and only keep the hit sequences with length greater than 100nt and less than 1000nt for stats calculation. the regular 'findhits' function is used here.
 
 ```python
 from hmseekr.gridsearch import gridsearch
@@ -279,15 +279,16 @@ testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa',
                         bkgfadir='./fastaFiles/bkg.fa',
                         knum=4, qTlist='0.9,0.99,0.01', 
                         nTlist='0.99,0.999,0.001', 
-                        stepmode=True,
-                        func='findhits', lenmin=100, lenmax=1000, 
+                        stepmode=True,func='findhits', 
+                        streaklen=25, gaplen=0,
+                        lenmin=100, lenmax=1000, 
                         outputname='gridsearch_results', 
                         outputdir='./gridsearch/', 
                         alphabet='ATCG', progressbar=True)
 ```
 
 
-perform a grid search to find the best transition probabilities for qT and nT each exactly as 0.9,0.99,0.999 and only keep the hit sequences with length greater than 100nt and less than 1000nt for stats calculation. the conditioned Emission 'findhits_condE' function is used here.
+perform a grid search to find the best transition probabilities for qT and nT each exactly as 0.9,0.99,0.999, merge non-hit gap that is smaller than 5nt that follows a hit region that is longer than 50nt, and only keep the hit sequences with length greater than 100nt and less than 1000nt for stats calculation. the conditioned Emission 'findhits_condE' function is used here.
 
 
 ```python
@@ -299,8 +300,9 @@ testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa',
                         bkgfadir='./fastaFiles/bkg.fa',
                         knum=4, qTlist='0.9,0.99,0.999', 
                         nTlist='0.99,0.999,0.999', 
-                        stepmode=False,
-                        func='findhits_condE', lenmin=100, lenmax=1000,
+                        stepmode=False,func='findhits_condE', 
+                        streaklen=50, gaplen=5,
+                        lenmin=100, lenmax=1000,
                         outputname='gridsearch_results', 
                         outputdir='./gridsearch/', 
                         alphabet='ATCG', progressbar=True)
@@ -317,12 +319,14 @@ testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa',
 7. nTlist (-nl): specify probability of null to null transition. the setting is the same as in qTlist.
 8. stepmode (-step): True or False, defines whether to use the qTlist and nTlist as min, max, step or as a list of values for qT and nT. Default is True: use qTlist and nTlist as min, max, step.
 9. func (-fc): the function to use for finding hits, default='findhits_condE', other options include 'findhits'
-10. lenmin (-li): keep hits sequences that have length > lenmin for calculating stats in the output, default=100. 
-11. lenmax (-la): keep hits sequences that have length < lenmax for calculating stats in the output, default=1000.
-12. outputname (-name): File name for output dataframe, default='gridsearch_results'
-13. outputdir (-dir): path of output directory to save outputs and intermediate files, default is a subfolder called gridsearch under current directory. The intermediate fasta seq files, count files, trained models and hits files are automatically saved under the outputdir into subfolders: seqs, counts, models, hits, where qT and nT are included in the file names as the iterated transition probabilities
-14. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
-15. progressbar (-pb): whether to show progress bar, default=True: show progress bar
+10. streaklen (-sl): Integer, minimum length of hit sequence that would be considered as a streak, default=25.
+11. gaplen (-gl): Integer, maximum length of non-hit region following a hit streak that would be considered as a gap, default=0 means no gap merging. If users choose to merge small gaps between hits segments, only hit segments that are greater than streaklen, called hit streak, would be considered. For each hit streak, if the following gap is less than gaplen, the gap would be converted as a hit region and merged with the previous hit streak and the following hit sequence (whether it is a streak or not). Repeat the process until no more gaps can be merged. If users choose not to merge small gaps between hits segments, and report all hits as they are, set gaplen to 0. For example, a sequence with the following status '+':hit, '-':non-hit, '++++++++++---+++++'would be converted into '++++++++++++++++++' when streaklen=8 and gaplen=2.
+12. lenmin (-li): keep hits sequences that have length > lenmin for calculating stats in the output, default=100. 
+13. lenmax (-la): keep hits sequences that have length < lenmax for calculating stats in the output, default=1000.
+14. outputname (-name): File name for output dataframe, default='gridsearch_results'
+15. outputdir (-dir): path of output directory to save outputs and intermediate files, default is a subfolder called gridsearch under current directory. The intermediate fasta seq files, count files, trained models and hits files are automatically saved under the outputdir into subfolders: seqs, counts, models, hits, where qT and nT are included in the file names as the iterated transition probabilities
+16. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
+17. progressbar (-pb): whether to show progress bar, default=True: show progress bar
 
 #### Output:
 a dataframe containing information about qT, nT, kmer number, the total number of hits sequences and the median, standard deviation of the hits sequences' pearson correlation r score to the query sequence and the median, standard deviation of the length of the hits sequences; and the same stats for the top 50 hits sequences (ranked by seekr r score) if there are more than 50 hits, after filtering by lenmin and lenmax
@@ -470,14 +474,14 @@ For wide format: each row of the output dataframe corresponds to a sequence in t
 
 
 #### Console Example:
-search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E
+search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E, merge non-hit gap that is smaller than 5nt that follows a hit region that is longer than 50nt. filtering and keep hit sqeuences with length greater than 100 and less than 1000, kmerLLR greater than 0 and p val less than 0.5 for stats calculation. the conditioned emission findhits_condE function is used
 
 ```
-hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -li 100 -la 1000 -llrf 0 -pf 1 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
+hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -sl 50 -gl 5 -li 100 -la 1000 -llrf 0 -pf 1 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
 ```
 
 #### Python Example:
-search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E
+search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E, merge non-hit gap that is smaller than 5nt that follows a hit region that is longer than 50nt. filtering and keep hit sqeuences with length greater than 100 and less than 1000, kmerLLR greater than 0 and p val less than 0.5 for stats calculation. the conditioned emission findhits_condE function is used
 
 ```python
 from hmseekr.seqstosummary import seqstosummary
@@ -486,8 +490,8 @@ testsum = seqstosummary(queryfadir='./fastaFiles/mXist_repeats.fa',
                         transdf='./trans.csv',
                         nullfadir='./fastaFiles/expressed_lncRNA.fa', 
                         searchpool='./fastaFiles/chr16.fa',
-                        bkgfadir='./all_lncRNA.fa',
-                        knum=4, func='findhits_condE',
+                        bkgfadir='./all_lncRNA.fa',knum=4, 
+                        func='findhits_condE',streaklen=50, gaplen=5,
                         lenmin=100, lenmax=1000, llrfilter=0, pfilter=1,
                         outputname='seqstosummary_results', 
                         outputdir='/Users/shuang/seqstosummary/', 
@@ -503,15 +507,17 @@ testsum = seqstosummary(queryfadir='./fastaFiles/mXist_repeats.fa',
 5. bkgfadir (-bkgf): fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function. This fasta file can be different from the nullfadir fasta file
 6. knum (-k): a single integer value for kmer number
 7. func (-fc): the function to use for finding hits, default='findhits_condE', other options include 'findhits'
-8. lenmin (-li): only keep hits sequences that have length > lenmin for calculating stats in the output, default=100. if no filter is needed, set to 0
-9. lenmax (-la): only keep hits sequences that have length < lenmax for calculating stats in the output, default=1000. 
-10. llrfilter (-llrf): only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0. if no filter is needed, set to 0. kmerLLR is the log likelihood ratio of of the probability that the set of k-mers y within a hit derived from the QUERY versus the NULL state. It is the sum of the log2(Q/N) ratio for each kmer within a hit. 
-11. pfilter (-pf): only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1. if no filter is needed, set to 1
-12. outputname (-name): File name for output dataframe, default='seqstosummary_results'
-13. outputdir (-dir): path of output directory to save outputs and intermediate files, default is a subfolder called seqstosummary under current directory. The intermediate fasta seq files, count files, trained models and hits files are automatically saved under the outputdir into subfolders: seqs, counts, models, hits, where qT and nT are included in the file names
-14. outdfformat (-format): the format of the output dataframe, default='long', other option is 'wide'
-15. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
-16. progressbar (-pb): whether to show progress bar, default=True: show progress bar
+8. streaklen (-sl): Integer, minimum length of hit sequence that would be considered as a streak, default=25.
+9. gaplen (-gl): Integer, maximum length of non-hit region following a hit streak that would be considered as a gap, default=0 means no gap merging. If users choose to merge small gaps between hits segments, only hit segments that are greater than streaklen, called hit streak, would be considered. For each hit streak, if the following gap is less than gaplen, the gap would be converted as a hit region and merged with the previous hit streak and the following hit sequence (whether it is a streak or not). Repeat the process until no more gaps can be merged. If users choose not to merge small gaps between hits segments, and report all hits as they are, set gaplen to 0. For example, a sequence with the following status '+':hit, '-':non-hit, '++++++++++---+++++'would be converted into '++++++++++++++++++' when streaklen=8 and gaplen=2.
+10. lenmin (-li): only keep hits sequences that have length > lenmin for calculating stats in the output, default=100. if no filter is needed, set to 0
+11. lenmax (-la): only keep hits sequences that have length < lenmax for calculating stats in the output, default=1000. 
+12. llrfilter (-llrf): only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0. if no filter is needed, set to 0. kmerLLR is the log likelihood ratio of of the probability that the set of k-mers y within a hit derived from the QUERY versus the NULL state. It is the sum of the log2(Q/N) ratio for each kmer within a hit. 
+13. pfilter (-pf): only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1. if no filter is needed, set to 1
+14. outputname (-name): File name for output dataframe, default='seqstosummary_results'
+15. outputdir (-dir): path of output directory to save outputs and intermediate files, default is a subfolder called seqstosummary under current directory. The intermediate fasta seq files, count files, trained models and hits files are automatically saved under the outputdir into subfolders: seqs, counts, models, hits, where qT and nT are included in the file names
+16. outdfformat (-format): the format of the output dataframe, default='long', other option is 'wide'
+17. alphabet (-a): String, Alphabet to generate k-mers default='ATCG'
+18. progressbar (-pb): whether to show progress bar, default=True: show progress bar
 
 #### Output:
 a dataframe in long format: where each row contains a sequence in the search pool fasta file, and eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; len_sum is the sum of the length of all counts of a search pool sequence with the query sequences; LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences; pval_min is the minimum of seekr pearson correlation p value for each search pool sequence with the query sequences. In wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta, and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min.
