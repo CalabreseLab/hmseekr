@@ -18,7 +18,9 @@
 # all the sequences in query fasta file will be merged to one sequence for calculating seekr.pearson 
 # bkgfadir: fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function
 # knum: a single integer value for kmer number, must be the same as the kmer number used in the findhits function
-# lengthfilter: only keep hits sequences that have length > lengthfilter for calculating stats in the output, default=25. if no filter is needed, set to 0
+# lenmin: keep hits sequences that have length > lenmin for calculating stats in the output, default=100. if no filter is needed, set to 0
+# lenmax: keep hits sequences that have length < lenmax for calculating stats in the output, default=1000. if no filter is needed, set to a super large number
+# pfilter: only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1.1. if no filter is needed, set to 1.1
 # outputdir: path of output directory, default is current directory, save the final dataframe together with other intermediate files
 # progressbar: whether to show progress bar, default=True: show progress bar
 
@@ -32,7 +34,7 @@
 # addpvals = hitseekr(hitsdir='/Users/shuang/mSEEKR/mm10expmap_queryA_4_viterbi.txt',
 #                     queryfadir='/Users/shuang/mSEEKR/fastaFiles/mXist_rA.fa', 
 #                     bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',
-#                     knum=4, lengthfilter=25, outputdir='./', progressbar=True)
+#                     knum=4, lenmin=50, lenmax=1000, pfilter=0.05, outputdir='./', progressbar=True)
 
 
 ########################################################################################################
@@ -47,25 +49,39 @@ import numpy as np
 import pandas as pd
 
 
-def hitseekr(hitsdir, queryfadir, bkgfadir, knum, lengthfilter=25, outputdir='./', progressbar=True):
+def hitseekr(hitsdir, queryfadir, bkgfadir, knum, lenmin=100, lenmax=1000, pfilter=1.1, outputdir='./', progressbar=True):
 
     # check outputdir format
     if not outputdir.endswith('/'):
         outputdir+='/'
 
-    if not os.path.exists(f'{outputdir}intermediates/'):
-        os.mkdir(f'{outputdir}intermediates/')
+    # strip the hitsdir to get the hits filename
+    hitsname = hitsdir.split('/')[-1]
+    # remove the .txt extension
+    hitsname = hitsname.split('.')[0]
+
+    if not os.path.exists(f'{outputdir}intermediates_{hitsname}/'):
+        os.mkdir(f'{outputdir}intermediates_{hitsname}/')
 
     # read the hits file
     hits = pd.read_csv(hitsdir, sep='\t')
 
     # only keep the rows in hits if Length col is greater than lengthfilter
-    hits = hits[hits['Length']>lengthfilter]
-    # lenvec = np.array(hits['Length'])
+    hits = hits[hits['Length']>lenmin]
+    hits = hits[hits['Length']<lenmax]
+
+    # check if there are any hits left after filtering
+    # if not, return an empty dataframe and print warning
+    if hits.shape[0] == 0:
+        print('No hits left after length filtering')
+        print('Please adjust the length filter lenmin and lenmax')
+        print('No file is saved')
+        return pd.DataFrame()
+
     # save the hits sequences
     hits_seq = hits['Sequence']
     hits_header = hits['seqName']+'_'+hits['Start'].astype(str)+'_'+hits['End'].astype(str)
-    hitseqdir = f'{outputdir}intermediates/hits_seqs.fa'
+    hitseqdir = f'{outputdir}intermediates_{hitsname}/hits_seqs.fa'
     
     # save the hits sequences and its header to a fasta file
     with open(hitseqdir, 'w') as f:
@@ -78,8 +94,8 @@ def hitseekr(hitsdir, queryfadir, bkgfadir, knum, lengthfilter=25, outputdir='./
     bkg_norm = seekrBasicCounter(bkgfadir, k=knum, log2='Log2.post', binary=True, label=False, leave=True, silent=True, alphabet='AGTC') 
     bkg_norm.get_counts() 
 
-    mean_path = f'{outputdir}intermediates/bkg_mean_{knum}mers.npy' 
-    std_path = f'{outputdir}intermediates/bkg_std_{knum}mers.npy' 
+    mean_path = f'{outputdir}intermediates_{hitsname}/bkg_mean_{knum}mers.npy' 
+    std_path = f'{outputdir}intermediates_{hitsname}/bkg_std_{knum}mers.npy' 
     np.save(mean_path, bkg_norm.mean)
     np.save(std_path, bkg_norm.std)
     print('Background norm vectors saved')
@@ -92,7 +108,7 @@ def hitseekr(hitsdir, queryfadir, bkgfadir, knum, lengthfilter=25, outputdir='./
         print('More than one sequence in query fasta file')
         print('All the query sequences will be merged for calculating seekr.pearson')
         print('Merged fasta file is saved under seqs folder as seekrquery.fa')
-        seekrqueryfadir = f'{outputdir}intermediates/seekrquery.fa'
+        seekrqueryfadir = f'{outputdir}intermediates_{hitsname}/seekrquery.fa'
         qseqs = '$'.join(qseqs)
         qseqfile = open(seekrqueryfadir, 'w')
         qseqfile.write('>concatenatedQuery' + '\n' + qseqs + '\n')
@@ -106,7 +122,7 @@ def hitseekr(hitsdir, queryfadir, bkgfadir, knum, lengthfilter=25, outputdir='./
     fitres = find_dist(inputseq=bkgfadir, k_mer=knum, models='common10', 
                        subsetting=True, subset_size = 10000, 
                        fit_model=True, statsmethod='ks',progress_bar=progressbar, 
-                       plotfit=f'{outputdir}intermediates/modelfitplot', outputname=f'{outputdir}intermediates/fitres')
+                       plotfit=f'{outputdir}intermediates_{hitsname}/modelfitplot', outputname=f'{outputdir}intermediates_{hitsname}/fitres')
     # delete the intermediate files generated by find_dist
     os.remove(f'bkg_mean_{knum}mers.npy')
     os.remove(f'bkg_std_{knum}mers.npy')
@@ -115,7 +131,7 @@ def hitseekr(hitsdir, queryfadir, bkgfadir, knum, lengthfilter=25, outputdir='./
     pvals=find_pval(seq1file=hitseqdir, seq2file=seekrqueryfadir, 
                     mean_path=mean_path, std_path=std_path,
                     k_mer=knum, fitres=fitres, log2='Log2.post', 
-                    bestfit=1, outputname=f'{outputdir}intermediates/hits_seekr_pval', progress_bar=progressbar)
+                    bestfit=1, outputname=f'{outputdir}intermediates_{hitsname}/hits_seekr_pval', progress_bar=progressbar)
     
     # change the first column name of pvals
     pvals.columns = ['seekr_pval']
@@ -125,14 +141,23 @@ def hitseekr(hitsdir, queryfadir, bkgfadir, knum, lengthfilter=25, outputdir='./
     # add the pvals seekr_pval values to the hits dataframe as a new column seekr_pval
     hits['seekr_pval'] = pvals['seekr_pval']
 
-    # strip the hitsdir to get the hits filename
-    hitsname = hitsdir.split('/')[-1]
-    # remove the .txt extension
-    hitsname = hitsname.split('.')[0]
-    
-    hits.to_csv(f'{outputdir}{hitsname}_seekr.txt',sep='\t', index=False)
+    # filter the hits dataframe based on the seekr p value
+    hits = hits[hits['seekr_pval']<pfilter]
 
-    return hits
+    # check if there are any hits left after filtering
+    # if not, return an empty dataframe and print warning
+    if hits.shape[0] == 0:
+        print('No hits left after seekr p value filtering')
+        print('Please adjust the seekr p value filter pfilter')
+        print('No file is saved')
+        return pd.DataFrame()
+    else:
+        # save the final hits dataframe
+        hits.to_csv(f'{outputdir}{hitsname}_seekr.txt',sep='\t', index=False)
+        return hits
+
+
+    
 
         
 
