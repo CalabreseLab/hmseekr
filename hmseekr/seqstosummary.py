@@ -180,7 +180,7 @@ def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
     # load in the background sequences and calculate the seekr norm vectors
     print('Calculating background norm vectors')
     print('This could take a while if the background fasta file is large')
-    bkg_norm = seekrBasicCounter(bkgfadir, k=knum, log2='Log2.post', binary=True, label=False, leave=True, silent=True, alphabet='AGTC') 
+    bkg_norm = seekrBasicCounter(bkgfadir, k=knum, log2='Log2.post', silent=True) 
     bkg_norm.get_counts() 
 
     if not os.path.exists(f'{newDir}counts/'):

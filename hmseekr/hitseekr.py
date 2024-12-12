@@ -1,14 +1,14 @@
 ###################################################################################################
 ### Description: 
-# This function takes in the results of findhits function and calculates the seekr pearson correlation p value between the hit sequences and the query sequence
+# This function takes in the results of findhits function and calculates the seekr pearson correlation r and p value between the hit sequences and the query sequence
 
 ### Details:
 # this function takes in the output of findhits function and the query sequence fasta file with a background fasta file
 # it fit the background sequences to the common10 distributions and takes the best ranked distribution
-# it calculates the seekr pearson correlation p values between the hit sequences and the query sequence based on the best ranked distribution
-# it adds the seekr p value to the hits dataframe
+# it calculates the seekr pearson correlation r and p values between the hit sequences and the query sequence based on the best ranked distribution
+# it adds the seekr r and p value to the hits dataframe
 # on top of the existing kmer log likelihood score (kmerLLR)
-# the seekr p value could provide additional information about the similarity between the hit sequences and the query sequence
+# the seekr r and p value could provide additional information about the similarity between the hit sequences and the query sequence
 
 
 ### Input:
@@ -21,11 +21,12 @@
 # lenmin: keep hits sequences that have length > lenmin for calculating stats in the output, default=100. if no filter is needed, set to 0
 # lenmax: keep hits sequences that have length < lenmax for calculating stats in the output, default=1000. if no filter is needed, set to a super large number
 # pfilter: only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1.1. if no filter is needed, set to 1.1
+# rfilter: only keep hits sequences that have seekr pearson correlation r value > rfilter for calculating stats in the output, default=-1.1. if no filter is needed, set to -1.1
 # outputdir: path of output directory, default is current directory, save the final dataframe together with other intermediate files
 # progressbar: whether to show progress bar, default=True: show progress bar
 
 ### Output:
-# a dataframe with seekr p value added to the findhits dataframe
+# a dataframe with seekr r and p value added to the findhits dataframe
 # outputname is automatically generated as the input findhits filename with '_seekr' appended to it
 
 ### Example:
@@ -34,13 +35,14 @@
 # addpvals = hitseekr(hitsdir='/Users/shuang/mSEEKR/mm10expmap_queryA_4_viterbi.txt',
 #                     queryfadir='/Users/shuang/mSEEKR/fastaFiles/mXist_rA.fa', 
 #                     bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',
-#                     knum=4, lenmin=50, lenmax=1000, pfilter=0.05, outputdir='./', progressbar=True)
+#                     knum=4, lenmin=50, lenmax=1000, pfilter=0.05, rfilter=0, outputdir='./', progressbar=True)
 
 
 ########################################################################################################
 
 from seekr.kmer_counts import BasicCounter as seekrBasicCounter 
 from seekr.fasta_reader import Reader as seekrReader
+from seekr.pearson import pearson as seekrPearson
 from seekr.find_pval import find_pval
 from seekr.find_dist import find_dist
 
@@ -49,7 +51,7 @@ import numpy as np
 import pandas as pd
 
 
-def hitseekr(hitsdir, queryfadir, bkgfadir, knum, lenmin=100, lenmax=1000, pfilter=1.1, outputdir='./', progressbar=True):
+def hitseekr(hitsdir, queryfadir, bkgfadir, knum, lenmin=100, lenmax=1000, pfilter=1.1, rfilter=-1.1, outputdir='./', progressbar=True):
 
     # check outputdir format
     if not outputdir.endswith('/'):
@@ -91,7 +93,7 @@ def hitseekr(hitsdir, queryfadir, bkgfadir, knum, lenmin=100, lenmax=1000, pfilt
     # load in the background sequences and calculate the seekr norm vectors
     print('Calculating background norm vectors')
     print('This could take a while if the background fasta file is large')
-    bkg_norm = seekrBasicCounter(bkgfadir, k=knum, log2='Log2.post', binary=True, label=False, leave=True, silent=True, alphabet='AGTC') 
+    bkg_norm = seekrBasicCounter(bkgfadir, k=knum, log2='Log2.post', silent=True) 
     bkg_norm.get_counts() 
 
     mean_path = f'{outputdir}intermediates_{hitsname}/bkg_mean_{knum}mers.npy' 
@@ -117,6 +119,16 @@ def hitseekr(hitsdir, queryfadir, bkgfadir, knum, lenmin=100, lenmax=1000, pfilt
     else:
         seekrqueryfadir = queryfadir
 
+    # calculate r value
+    query_count = seekrBasicCounter(infasta=queryfadir, outfile=f'{outputdir}intermediates_{hitsname}/seekrquery_counts.csv', k=knum, mean=mean_path, std=std_path, log2='Log2.post', silent=True) 
+    query_count.make_count_file()
+
+    hits_count = seekrBasicCounter(infasta=hitseqdir, outfile=f'{outputdir}intermediates_{hitsname}/seekrhits_counts.csv', k=knum, mean=mean_path, std=std_path, log2='Log2.post', silent=True) 
+    hits_count. make_count_file() 
+
+    sim = seekrPearson(hits_count.counts,query_count.counts)
+    hits['seekr_rval']=sim
+    
 
     # find the dist of background
     fitres = find_dist(inputseq=bkgfadir, k_mer=knum, models='common10', 
@@ -150,11 +162,22 @@ def hitseekr(hitsdir, queryfadir, bkgfadir, knum, lenmin=100, lenmax=1000, pfilt
         print('No hits left after seekr p value filtering')
         print('Please adjust the seekr p value filter pfilter')
         print('No file is saved')
-        return pd.DataFrame()
+        #return pd.DataFrame()
     else:
-        # save the final hits dataframe
-        hits.to_csv(f'{outputdir}{hitsname}_seekr.txt',sep='\t', index=False)
-        return hits
+        hits = hits[hits['seekr_rval']>rfilter]
+
+        if hits.shape[0] == 0:
+            print('No hits left after seekr r value filtering')
+            print('Please adjust the seekr r value filter rfilter')
+            print('No file is saved')
+            #return pd.DataFrame()
+        else: 
+            # save the final hits dataframe
+            hits.to_csv(f'{outputdir}{hitsname}_seekr.txt',sep='\t', index=False)
+            #return hits
+
+
+        
 
 
     

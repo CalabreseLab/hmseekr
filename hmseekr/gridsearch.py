@@ -207,7 +207,7 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
     # load in the background sequences and calculate the seekr norm vectors
     print('Calculating background norm vectors')
     print('This could take a while if the background fasta file is large')
-    bkg_norm = seekrBasicCounter(bkgfadir, k=knum, log2='Log2.post', binary=True, label=False, leave=True, silent=True, alphabet='AGTC') 
+    bkg_norm = seekrBasicCounter(bkgfadir, k=knum, log2='Log2.post', silent=True) 
     bkg_norm.get_counts() 
     if not os.path.exists(f'{newDir}counts/'):
         os.mkdir(f'{newDir}counts/')
@@ -246,11 +246,11 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
         qseqfile.write('>concatenatedQuery' + '\n' + qseqs + '\n')
         qseqfile.close()
 
-        query_count = seekrBasicCounter(infasta=seekrqueryfadir, outfile=f'{newDir}counts/seekrquery_counts.csv', k=knum, binary=False, label=True, mean=mean_path, std=std_path, log2='Log2.post', leave=True, silent=True, alphabet='ACGT') 
+        query_count = seekrBasicCounter(infasta=seekrqueryfadir, outfile=f'{newDir}counts/seekrquery_counts.csv', k=knum, mean=mean_path, std=std_path, log2='Log2.post', silent=True) 
         query_count.make_count_file() 
 
     else:
-        query_count = seekrBasicCounter(infasta=queryfadir, outfile=f'{newDir}counts/seekrquery_counts.csv', k=knum, binary=False, label=True, mean=mean_path, std=std_path, log2='Log2.post', leave=True, silent=True, alphabet='ACGT') 
+        query_count = seekrBasicCounter(infasta=queryfadir, outfile=f'{newDir}counts/seekrquery_counts.csv', k=knum, mean=mean_path, std=std_path, log2='Log2.post', silent=True) 
         query_count.make_count_file() 
 
     # create an empty dataframe to store the results
@@ -344,7 +344,7 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
                         f.write(f'{hits_header.iloc[i]}\n{hits_seq.iloc[i]}\n')
 
                 # calculate kmer counts of hits sequences and the pearson correlation r score
-                hits_count = seekrBasicCounter(infasta=hitseqdir, outfile=f'{newDir}counts/seekrhits_q{qT}_n{nT}_counts.csv', k=knum, binary=False, label=True, mean=mean_path, std=std_path, log2='Log2.post', leave=True, silent=True, alphabet='ACGT') 
+                hits_count = seekrBasicCounter(infasta=hitseqdir, outfile=f'{newDir}counts/seekrhits_q{qT}_n{nT}_counts.csv', k=knum, mean=mean_path, std=std_path, log2='Log2.post', silent=True) 
                 hits_count. make_count_file() 
                 sim = seekrPearson(hits_count.counts,query_count.counts)
                 hits['seekr_r']=sim
@@ -362,7 +362,7 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
                         for i in range(len(hits_seq_top50)):
                             f.write(f'{hits_header_top50.iloc[i]}\n{hits_seq_top50.iloc[i]}\n')
                     # calculate kmer counts of top 50 hits sequences and the pearson correlation r score
-                    hits_count_top50 = seekrBasicCounter(infasta=hitseqdir_top50, outfile=f'{newDir}counts/seekrhits_top50_q{qT}_n{nT}_counts.csv', k=knum, binary=False, label=True, mean=mean_path, std=std_path, log2='Log2.post', leave=True, silent=True, alphabet='ACGT') 
+                    hits_count_top50 = seekrBasicCounter(infasta=hitseqdir_top50, outfile=f'{newDir}counts/seekrhits_top50_q{qT}_n{nT}_counts.csv', k=knum, mean=mean_path, std=std_path, log2='Log2.post', silent=True) 
                     hits_count_top50. make_count_file() 
                     sim_top50 = seekrPearson(hits_count_top50.counts,query_count.counts)
                     # append the results to the dataframe
