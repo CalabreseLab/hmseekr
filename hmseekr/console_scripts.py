@@ -307,12 +307,17 @@ and eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_
 
 Details:
 this function is designed to get the overall likeliness of each search pool sequence to the query sequences
-the function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file (for hmseekr) and a background fasta file (for seekr)
+the function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a length filter file, a search pool fasta file, a null fasta file (for hmseekr) and a background fasta file (for seekr)
 here the transition probability dataframe must have the same rows as the query fasta file
 the columns should be '[qT,nT]' where qT is the probability of query to query transition, nT is the probability of null to null transition 
 the transition prbability for each query sequence can be different and can be optimized by the gridsearch function. 
 please include 'qT' and 'nT' as the first row (the column names) for the two columns in the csv file. 
 users can also choose to set the transition probability to be the same for all query sequences
+the length filter csv file should have the same rows as the query fasta file
+the columns should be '[lenmin,lenmax]' where lenmin is the minimum length of the hit region to keep (>lenmin) and lenmax is the maximum length of the hit region to keep (<lenmax)
+please include 'lenmin' and 'lenmax' as the first row (the column names) for the two columns in the csv file
+the length filter for each query sequence can be different based on the length of the query sequence
+make sure the order of the rows in the transition probability dataframe and length filter csv file matches the order of the query sequences in the fasta file
 the function will run the kmers, train, findhits and hitseekr functions for each query sequence
 then the results can be filtered by the length of the hit regions, the kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value
 finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence
@@ -334,9 +339,9 @@ the output dataframe can then be used to generalize an overall likeliness of eac
 
 Example:
 search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E,
-filtering and keep hit sqeuences with length greater than 100 and less than 1000, kmerLLR greater than 0 and p val less than 0.5 for stats calculation. 
+filtering and keep hit sqeuences with length provided in lenfilter, kmerLLR greater than 0 and p val less than 0.5 for stats calculation. 
 the conditioned emission findhits_condE function is used
-    $ hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -li 100 -la 1000 -llrf 0 -pf 0.5 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
+    $ hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -lf './lenfilter.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -llrf 0 -pf 0.5 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
 
 
 For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
@@ -621,19 +626,18 @@ def console_hmseekr_seqstosummary():
     parser = argparse.ArgumentParser(usage=SEQSTOSUMMARY_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-qf","--queryfadir",type=str,help='Path to the fasta file of query sequences or sequences of interest (e.g. all repeats of Xist)', required=True)
-    parser.add_argument("-td","--transdf",type=str,help='Path to the transition probability dataframe in csv format, columns should be [qT,nT], rows = num of seqs in query fasta', required=True)
+    parser.add_argument("-td","--transdf",type=str,help='Path to the transition probability dataframe in csv format, columns should be [qT,nT] no index column, rows = num of seqs in query fasta', required=True)
+    parser.add_argument("-lf","--lenfilter",type=str,help='Path to the length filter file in csv format, columns should be [lenmin,lenmax] no index column, rows = num of seqs in query fasta', required=True)
     parser.add_argument("-nf","--nullfadir", type=str,help='Path to the fasta file of null model (e.g. transcriptome, genome, etc.)', required=True)
     parser.add_argument("-pool","--searchpool",type=str,help='Path to fasta file from which the similarity scores to query seq will be calculated and hits seqs be found', required=True)
     parser.add_argument("-bkgf","--bkgfadir", type=str,help='Path to the fasta file of bakground sequences for seekr normalization vectors(see manual for details)', required=True)
     parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be one single integer', required=True)
     parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits and findhits_condE', default='findhits_condE')
-    parser.add_argument("-li","--lenmin",type=int,help='only keep hits sequences that have length > lenmin for calculating stats. must be one single integer, default=100', default=100)
-    parser.add_argument("-la","--lenmax",type=int,help='only keep hits sequences that have length < lenmax for calculating stats. must be one single integer, default=1000', default=1000)
     parser.add_argument("-llrf","--llrfilter",type=float,help='only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0', default=0.0)
     parser.add_argument("-pf","--pfilter",type=float,help='only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1.1', default=1.1)
     parser.add_argument("-name","--outputname",type=str,help='File name for output dataframe', default='seqstosummary_results')
     parser.add_argument("-dir","--outputdir",type=str,help='Directory to save output dataframe and intermediate files',default='./seqstosummary/')
-    parser.add_argument("-format","--outdfformat",type=str,help="the format of the output dataframe, default='long', other option is 'wide'",default='long')
+    parser.add_argument("-format","--outdfformat",type=str,help="the format of the output dataframe, default='both', other options are 'wide' or 'long'",default='both')
     parser.add_argument("-a","--alphabet",type=str,help='String, Alphabet to generate k-mers (e.g. ATCG)',default='ATCG')
     parser.add_argument("-pb","--progressbar",action='store_true',help='when called, progress bar will be shown; if omitted, no progress bar will be shown')
 
@@ -642,13 +646,12 @@ def console_hmseekr_seqstosummary():
     seqstosummary(
         args.queryfadir,
         args.transdf,
+        args.lenfilter,
         args.nullfadir,
         args.searchpool,
         args.bkgfadir,
         args.knum,
         args.func,
-        args.lenmin,
-        args.lenmax,
         args.llrfilter,
         args.pfilter,
         args.outputname,

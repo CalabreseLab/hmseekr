@@ -9,12 +9,17 @@
 
 ### Details:
 # this function is designed to get the overall likeliness of each search pool sequence to the query sequences
-# the function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file (for hmseekr) and a background fasta file (for seekr)
+# the function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a length filter file, a search pool fasta file, a null fasta file (for hmseekr) and a background fasta file (for seekr)
 # here the transition probability dataframe must have the same rows as the query fasta file
 # the columns should be '[qT,nT]' where qT is the probability of query to query transition, nT is the probability of null to null transition 
 # the transition prbability for each query sequence can be different and can be optimized by the gridsearch function. 
 # please include 'qT' and 'nT' as the first row (the column names) for the two columns in the csv file. 
 # users can also choose to set the transition probability to be the same for all query sequences
+# the length filter csv file should have the same rows as the query fasta file
+# the columns should be '[lenmin,lenmax]' where lenmin is the minimum length of the hit region to keep (>lenmin) and lenmax is the maximum length of the hit region to keep (<lenmax)
+# please include 'lenmin' and 'lenmax' as the first row (the column names) for the two columns in the csv file
+# the length filter for each query sequence can be different based on the length of the query sequence
+# make sure the order of the rows in the transition probability dataframe and length filter csv file matches the order of the query sequences in the fasta file
 # the function will run the kmers, train, findhits and hitseekr functions for each query sequence
 # then the results can be filtered by the length of the hit regions, the kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value
 # finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence
@@ -42,14 +47,17 @@
 # transdf: Path to the transition probability dataframe in csv format, the dataframe should have the same rows as the query fasta file
 # and the columns should be [qT,nT] where qT is the probability of query to query transition, nT is the probability of null to null transition
 # please do not include the index column in the csv file
+# but make sure the order of the rows in the csv file matches the order of the query sequences in the fasta file
+# lenfilter: Path to the length filter csv file, the dataframe should have the same rows as the query fasta file
+# and the columns should be [lenmin,lenmax] where lenmin is the minimum length of the hit region to keep (>lenmin) and lenmax is the maximum length of the hit region to keep (<lenmax)
+# please do not include the index column in the csv file
+# but make sure the order of the rows in the csv file matches the order of the query sequences in the fasta file
 # nullfadir: Path to the fasta file of null model sequences (e.g. transcriptome, genome, etc.)
 # searchpool: Path to fasta file which defines the region to search for potential hits (highly similar regions) based on the precalculated model (train function)
 # bkgfadir: fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function
 # this fasta file can be different from the nullfadir fasta file
 # knum: a single integer value for kmer number
 # func: the function to use for finding hits, default='findhits_condE', other options include 'findhits'
-# lenmin: only keep hits sequences that have length > lenmin for calculating stats in the output, default=100. if no filter is needed, set to 0
-# lenmax: only keep hits sequences that have length < lenmax for calculating stats in the output, default=1000. 
 # llrfilter: only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0. if no filter is needed, set to 0
 # kmerLLR is the log likelihood ratio of of the probability 
 # that the set of k-mers y within a hit derived from the QUERY versus the NULL state
@@ -59,7 +67,7 @@
 # outputdir: path of output directory to save outputs and intermediate files, default is a subfolder called seqstosummary under current directory
 # the intermediate fasta seq files, count files, trained models and hits files 
 # are automatically saved under the outputdir into subfolders: seqs counts, models, hits
-# outdfformat: the format of the output dataframe, default='long', other option is 'wide'
+# outdfformat: the format of the output dataframe, default='both', where both long and wide format would be saved, other options are 'wide' or 'long'
 # alphabet: String, Alphabet to generate k-mers default='ATCG'
 # progressbar: whether to show progress bar, default=True: show progress bar
 
@@ -81,17 +89,18 @@
 ### Example:
 # from hmseekr.seqstosummary import seqstosummary
 
-# testsum = seqstosummary(queryfadir='/Users/shuang/mSEEKR/fastaFiles/mXist_repeats.fa', 
-#                         transdf='/Users/shuang/mSEEKR/fastaFiles/transdf.csv',
-#                         nullfadir='/Users/shuang/mSEEKR/fastaFiles/mm10_exp_map_200.fa', 
-#                         searchpool='/Users/shuang/mSEEKR/fastaFiles/pool.fa',
-#                         bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',
-#                         knum=4, func='findhits_condE',
-#                         lenmin=100, lenmax=1000 ,llrfilter=0, pfilter=1,
-#                         outputname='seqstosummary_results', 
-#                         outputdir='/Users/shuang/seqstosummary/', 
-#                         outdfformat='long',alphabet='ATCG', 
-#                         progressbar=True)
+# seqstosummary(queryfadir='/Users/shuang/mSEEKR/fastaFiles/mXist_repeats.fa', 
+#               transdf='/Users/shuang/mSEEKR/fastaFiles/transdf.csv',
+#               lenfilter='/Users/shuang/mSEEKR/fastaFiles/lenfilter.csv',
+#               nullfadir='/Users/shuang/mSEEKR/fastaFiles/mm10_exp_map_200.fa', 
+#               searchpool='/Users/shuang/mSEEKR/fastaFiles/pool.fa',
+#               bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',
+#               knum=4, func='findhits_condE',
+#               llrfilter=0, pfilter=1,
+#               outputname='seqstosummary_results', 
+#               outputdir='/Users/shuang/seqstosummary/', 
+#               outdfformat='both',alphabet='ATCG', 
+#               progressbar=True)
 
 
 ########################################################################################################
@@ -111,10 +120,9 @@ import pandas as pd
 from tqdm import tqdm
 
 
-def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
-                  func='findhits_condE', lenmin=100, lenmax=1000, 
-                  llrfilter=0, pfilter=1,outputname='seqstosummary_results',
-                  outputdir='./seqstosummary/',outdfformat='long',alphabet='ATCG', 
+def seqstosummary(queryfadir, transdf, lenfilter, nullfadir, searchpool, bkgfadir, knum,
+                  func='findhits_condE', llrfilter=0, pfilter=1,outputname='seqstosummary_results',
+                  outputdir='./seqstosummary/',outdfformat='both',alphabet='ATCG', 
                   progressbar=True):
     
     # read in the query fasta file
@@ -128,6 +136,32 @@ def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
         print('The transition probability dataframe should be in csv format')
         print('Please check the input file')
         return None
+    
+    # check if lenfilter is a csv file
+    if not lenfilter.endswith('.csv'):
+        print('The length filter file should be in csv format')
+        print('Please check the input file')
+        return None
+
+    # read in lenfilter
+    lenf = pd.read_csv(lenfilter)
+    # check if tdf has two columns
+    if len(lenf.columns) != 2:
+        print('The lenfilter file should have two columns:lenmin and lenmax')
+        print('Please check the input file')
+        return None
+
+    # test if the transition probability dataframe has the same rows as the query fasta file
+    if len(queryseqs) != lenf.shape[0]: 
+        print('The number of query sequences in the fasta file does not match the number of rows in the lenfilter file')
+        print('Please check the input files')
+        return None
+
+    # rename the column names of tdf
+    lenf.columns = ['lenmin','lenmax']
+    print('make sure the lenfilter file 1st column is lenmin and 2nd column is lenmax')
+    lenminvec=lenf['lenmin']
+    lenmaxvec=lenf['lenmax']
 
     # read in the transition probability dataframe
     tdf = pd.read_csv(transdf)
@@ -138,7 +172,7 @@ def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
         return None
 
     # test if the transition probability dataframe has the same rows as the query fasta file
-    if len(queryseqs) != len(tdf): 
+    if len(queryseqs) != tdf.shape[0]: 
         print('The number of query sequences in the fasta file does not match the number of rows in the transition probability dataframe')
         print('Please check the input files')
         return None
@@ -256,14 +290,14 @@ def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
         # hitseekr, do not use the function as we can recycle the bkg norm vecs and model fits
 
         # only keep the rows in hits if Length col is greater than lengthfilter
-        hits = hits[hits['Length']>lenmin]
-        hits = hits[hits['Length']<lenmax]
+        hits = hits[hits['Length']>lenminvec[i]]
+        hits = hits[hits['Length']<lenmaxvec[i]]
 
         # check if there are still hits after filtering
         if len(hits) == 0:
             print('for query sequence',i+1,'in the query fasta file')
             print('No hits after length filtering')
-            print('Please try to adjust lenmin and lenmax values')
+            print('Please try to adjust lenmin and lenmax values in lenfilter file')
             # skip the rest of the loop and continue to the next query sequence
             print('continue to the next query sequence')
             continue
@@ -348,12 +382,14 @@ def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
         # Flatten the MultiIndex columns and rename them
         combstats_summary.columns = ['seqName', 'feature', 'counts', 'len_sum', 'LLR_sum', 'LLR_median', 'pval_median', 'pval_min']
 
-        if outdfformat == 'long':
+        # Save long format if outdfformat is 'long' or 'both'
+        if outdfformat in ['long', 'both']:
             # save the summary dataframe
             combstats_summary.to_csv(f'{newDir}{outputname}_long.csv',index=False)
 
-            return combstats_summary
-        elif outdfformat == 'wide':
+            #return combstats_summary
+        # Save wide format if outdfformat is 'wide' or 'both'
+        if outdfformat in ['wide', 'both']:
             # pivot the dataframe
             combstats_summary_wide = combstats_summary.pivot(index='seqName',columns='feature',values=['counts', 'len_sum', 'LLR_sum', 'LLR_median', 'pval_median', 'pval_min'])
             # Flatten the MultiIndex columns
@@ -363,7 +399,7 @@ def seqstosummary(queryfadir, transdf, nullfadir, searchpool, bkgfadir, knum,
             # save the summary dataframe
             combstats_summary_wide.to_csv(f'{newDir}{outputname}_wide.csv',index=False)
 
-            return combstats_summary_wide
+            #return combstats_summary_wide
 
 
 
