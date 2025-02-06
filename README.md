@@ -86,18 +86,18 @@ This step calculates the emission matrix based on kmer counts, prepare transitio
 It calculates the hidden state transition matrix, hidden state emission matrix, states and starting probability of each hidden state and saves them to a binary file.
 
 #### Console Example:
-train a model using previously generated kmer count files for repeatA and all lncRNA (kmers, or hmseekr_kmers function) with kmer size 4 and transition rates of 0.9999 for both query to query and null to null. Save the model to the current directory.
+train a model using previously generated kmer count files for repeatA and all lncRNA (kmers, or hmseekr_kmers function) with kmer size 4 and transition rates of 0.99 for both query to query and null to null. Save the model to the current directory.
 ```
-hmseekr_train -qd './counts/repeatA.dict' -nd './counts/all_lncRNA.dict' -k 4 -a ATCG -qT 0.9999 -nT 0.9999 -qPre repeatA -nPre lncRNA -dir './'
+hmseekr_train -qd './counts/repeatA.dict' -nd './counts/all_lncRNA.dict' -k 4 -a ATCG -qT 0.99 -nT 0.99 -qPre repeatA -nPre lncRNA -dir './'
 ```
 
 #### Python Example:
-train a model using previously generated kmer count files for repeatA and all lncRNA (kmers, or hmseekr_kmers function) with kmer size 2,3,4 and transition rates of 0.9999 for both query to query and null to null, and save to the markovModels folder
+train a model using previously generated kmer count files for repeatA and all lncRNA (kmers, or hmseekr_kmers function) with kmer size 2,3,4 and transition rates of 0.99 for both query to query and null to null, and save to the markovModels folder
 ```python
 from hmseekr.train import train
 
 testmodel = train(querydir='./counts/repeatA.dict', nulldir='./counts/all_lncRNA.dict',
-                  kvec='2,3,4', alphabet='ATCG', queryT=0.9999, nullT=0.9999,
+                  kvec='2,3,4', alphabet='ATCG', queryT=0.99, nullT=0.99,
                   queryPrefix='repeatA', nullPrefix='lncRNA', outputdir='./markovModels/')
 ```
 
@@ -107,8 +107,8 @@ testmodel = train(querydir='./counts/repeatA.dict', nulldir='./counts/all_lncRNA
 2. nulldir (-nd): Path to kmer count file that compose null model/background sequences (e.g. transcriptome, genome, etc.)
 3. kvec (-k): Comma delimited string of possible k-mer values. For example, '3,4,5' or just '4'. Numbers in kvec must be found in the k-mer count file (precalculated by kmers function)
 4. alphabet (-a): Alphabet to generate k-mers, default=ATCG
-5. queryT (-qT): Probability of query to query transition, default=0.9999, should be between 0 and 1 but not equal to 0 or 1
-6. nullT (-nT): Probability of null to null transition, default=0.9999, should be between 0 and 1 but not equal to 0 or 1
+5. queryT (-qT): Probability of query to query transition, default=0.99, should be between 0 and 1 but not equal to 0 or 1
+6. nullT (-nT): Probability of null to null transition, default=0.93, should be between 0 and 1 but not equal to 0 or 1
 7. queryPrefix (-qPre): prefix file name for query, defualt='query'
 8. nullPrefix (-nPre): prefix file name for null, defualt='null'
 9. outputdir (-dir): path of output directory to save output trained model file in .dict format, default is current directory
