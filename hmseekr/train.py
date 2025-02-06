@@ -18,8 +18,8 @@
 # kvec: Comma delimited string of possible k-mer values. For example, '3,4,5' or just '4'
 # numbers in kvec must be found in the k-mer count file (precalculated by kmers function)
 # alphabet: String, Alphabet to generate k-mers, default=ATCG
-# queryT: Probability of query to query transition, default=0.9999, should be between 0 and 1 but not equal to 1 or 0
-# nullT: Probability of null to null transition, default=0.9999, should be between 0 and 1 but not equal to 1 or 0
+# queryT: Probability of query to query transition, default=0.99, should be between 0 and 1 but not equal to 1 or 0
+# nullT: Probability of null to null transition, default=0.93, should be between 0 and 1 but not equal to 1 or 0
 # queryPrefix: prefix file name for query, defualt='query'
 # nullPrefix: prefix file name for null, defualt='null'
 # outputdir: path of output directory to save output trained model file in .dict format, default is current directory
@@ -101,7 +101,7 @@ from hmseekr import corefunctions
 import os
 import pickle
 
-def train(querydir, nulldir, kvec, alphabet='ATCG', queryT=0.9999, nullT=0.9999, queryPrefix='query', nullPrefix='null', outputdir='./'):
+def train(querydir, nulldir, kvec, alphabet='ATCG', queryT=0.99, nullT=0.93, queryPrefix='query', nullPrefix='null', outputdir='./'):
 
 
     kVals = [int(i) for i in kvec.split(',')]

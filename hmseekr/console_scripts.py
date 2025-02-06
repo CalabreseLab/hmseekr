@@ -60,8 +60,8 @@ qT and nT should be between 0 and 1 but not equal to 0 or 1
 
 Example:
 train a model using previously generated kmer count files for repeatA and all lncRNA (hmseekr_kmers function) with kmer size 4
-and transition rates of 0.9999 for both query to query and null to null
-    $ hmseekr_train -qd './counts/repeatA.dict' -nd './counts/all_lncRNA.dict' -k 4 -a ATCG -qT 0.9999 -nT 0.9999 -qPre repeatA -nPre lncRNA -dir './models/'
+and transition rates of 0.99 for both query to query and null to null
+    $ hmseekr_train -qd './counts/repeatA.dict' -nd './counts/all_lncRNA.dict' -k 4 -a ATCG -qT 0.99 -nT 0.99 -qPre repeatA -nPre lncRNA -dir './models/'
 
 minimal code with all settings to default
     $ hmseekr_train -qd './counts/repeatA.dict' -nd './counts/all_lncRNA.dict' -k 4
@@ -389,8 +389,8 @@ def console_hmseekr_train():
     parser.add_argument("-nd","--nulldir", type=str,help='Path to kmer count file that compose null model or bakground sequences (e.g. transcriptome, genome, etc.)', required=True)
     parser.add_argument("-k","--kvec",type=str,help='Comma delimited string of possible k-mer values, must be found in the k-mer count file', required=True)
     parser.add_argument("-a","--alphabet",type=str,help='String, Alphabet to generate k-mers (e.g. ATCG)',default='ATCG')
-    parser.add_argument("-qT","--queryT",type=float,help='Probability of query to query transition', default=0.9999)  
-    parser.add_argument("-nT","--nullT",type=float,help='Probability of null to null transition', default=0.9999) 
+    parser.add_argument("-qT","--queryT",type=float,help='Probability of query to query transition', default=0.99)  
+    parser.add_argument("-nT","--nullT",type=float,help='Probability of null to null transition', default=0.93) 
     parser.add_argument("-qPre","--queryPrefix",type=str,help='prefix file name for query', default='query')
     parser.add_argument("-nPre","--nullPrefix",type=str,help='prefix file name for null', default='null')
     parser.add_argument("-dir","--outputdir",type=str,help='path of output directory to save output trained model file',default='./')
