@@ -304,6 +304,12 @@ Description:
 This function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file and a background fasta file.
 and generates a summary dataframe where each row contains a sequence in the search pool fasta file
 and eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min
+or a wide format dataframe where each row corresponds to a sequence in the search pool fasta file
+and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min
+wide format has the unique stats that summarize the overall likeliness of each search pool sequence to all the query sequences
+this stat is listed under the column name 'unique_coverage_fraction' in the wide format dataframe
+which is the fraction of the total length of the search pool sequence that is covered by the unique hit regions across all the query sequences
+overlapping hit regions are merged and only the unique regions are counted here
 
 Details:
 this function is designed to get the overall likeliness of each search pool sequence to the query sequences
@@ -334,14 +340,19 @@ pval_median is the median of seekr pearson correlation p value for each search p
 pval_min is the minimal seekr pearson correlation p value for each search pool sequence with the query sequences
 for wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
 and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min
+wide format has the unique stats that summarize the overall likeliness of each search pool sequence to all the query sequences
+this stat is listed under the column name 'unique_coverage_fraction' in the wide format dataframe
+which is the fraction of the total length of the search pool sequence that is covered by the unique hit regions across all the query sequences
+overlapping hit regions are merged and only the unique regions are counted here
+it also includes columns for the total length of each pool seq (seq_total_length) and the total length of the unique hit regions across all the query sequences (total_unique_coverage)
 the output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
 
 
 Example:
 search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E,
 filtering and keep hit sqeuences with length provided in lenfilter, kmerLLR greater than 0 and p val less than 0.5 for stats calculation. 
-the conditioned emission findhits_condE function is used
-    $ hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -lf './lenfilter.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -llrf 0 -pf 0.5 -name 'seqstosummary_results' -dir './seqstosummary/' -format long -a 'ATCG' -pb
+the conditioned emission findhits_condE function is used, print the output in wide format
+    $ hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -lf './lenfilter.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -llrf 0 -pf 0.5 -name 'seqstosummary_results' -dir './seqstosummary/' -format wide -a 'ATCG' -pb
 
 
 For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/

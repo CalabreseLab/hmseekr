@@ -5,6 +5,10 @@
 # and eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min (long format)
 # or a wide format dataframe where each row corresponds to a sequence in the search pool fasta file
 # and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min
+# wide format has the unique stats that summarize the overall likeliness of each search pool sequence to all the query sequences
+# this stat is listed under the column name 'unique_coverage_fraction' in the wide format dataframe
+# which is the fraction of the total length of the search pool sequence that is covered by the unique hit regions across all the query sequences
+# overlapping hit regions are merged and only the unique regions are counted here
 
 
 ### Details:
@@ -35,7 +39,12 @@
 # pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences
 # pval_min is the minimum of seekr pearson correlation p value for each search pool sequence with the query sequences
 # for wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
-# and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median
+# and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min
+# wide format has the unique stats that summarize the overall likeliness of each search pool sequence to all the query sequences
+# this stat is listed under the column name 'unique_coverage_fraction' in the wide format dataframe
+# which is the fraction of the total length of the search pool sequence that is covered by the unique hit regions across all the query sequences
+# overlapping hit regions are merged and only the unique regions are counted here
+# it also includes columns for the total length of each pool seq (seq_total_length) and the total length of the unique hit regions across all the query sequences (total_unique_coverage)
 # the output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
 
 
@@ -84,6 +93,12 @@
 # pval_min is the minimum of seekr pearson correlation p value for each search pool sequence with the query sequences
 # in wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
 # and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min
+# wide format has the unique stats that summarize the overall likeliness of each search pool sequence to all the query sequences
+# this stat is listed under the column name 'unique_coverage_fraction' in the wide format dataframe
+# which is the fraction of the total length of the search pool sequence that is covered by the unique hit regions across all the query sequences
+# overlapping hit regions are merged and only the unique regions are counted here
+# it also includes columns for the total length of each pool seq (seq_total_length) and the total length of the unique hit regions across all the query sequences (total_unique_coverage)
+
 
 
 ### Example:
@@ -118,6 +133,39 @@ import os
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+
+def merge_intervals(intervals):
+    """
+    Given a list of intervals (each a (start, end) tuple), merge overlapping intervals.
+    Assumes intervals are sorted by start.
+    """
+    if not intervals:
+        return []
+    
+    merged = [list(intervals[0])]
+    for current_start, current_end in intervals[1:]:
+        last_start, last_end = merged[-1]
+        # If intervals overlap or are adjacent (e.g., 15 and 16 if inclusive)
+        if current_start <= last_end + 1:
+            # Merge by extending the end if needed
+            merged[-1][1] = max(last_end, current_end)
+        else:
+            merged.append([current_start, current_end])
+    return merged
+
+def unique_coverage_length(group):
+    # Sort the group by start
+    intervals = group[['Start', 'End']].sort_values('Start')
+    # Convert to list of (start, end) tuples
+    interval_list = list(intervals.itertuples(index=False, name=None))
+    
+    # Merge overlapping intervals
+    merged = merge_intervals(interval_list)
+    
+    # Calculate total length assuming inclusive intervals:
+    # For an interval (s, e), length = e - s + 1
+    total_length = sum(end - start + 1 for start, end in merged)
+    return total_length
 
 
 def seqstosummary(queryfadir, transdf, lenfilter, nullfadir, searchpool, bkgfadir, knum,
@@ -371,6 +419,7 @@ def seqstosummary(queryfadir, transdf, lenfilter, nullfadir, searchpool, bkgfadi
         print('Please try different filtering values')
         return None
     else: 
+        
         # group by the search pool sequence and the feature name
         combstats_summary = combstats.groupby(['seqName', 'feature']).agg({
             'Start': 'count',
@@ -396,10 +445,28 @@ def seqstosummary(queryfadir, transdf, lenfilter, nullfadir, searchpool, bkgfadi
             combstats_summary_wide.columns = [f'{col[1]}_{col[0]}' for col in combstats_summary_wide.columns]
             # Reset index to make 'seqName' a column again
             combstats_summary_wide = combstats_summary_wide.reset_index()
+            # calculate total unique coverage for each seq in the pool across all the query features
+            # this stat is only available in wide format
+            coverage_dict = combstats.groupby('seqName').apply(unique_coverage_length)
+            # Convert the Series to a DataFrame. This will make 'seqname' a column.
+            coverage_df = coverage_dict.reset_index(name='total_unique_coverage')
+            # get the total length of each pool seq
+            poolseqs = seekrReader(searchpool).get_seqs()
+            pool_lengths = [len(seq) for seq in poolseqs]
+            poolheaders = seekrReader(searchpool).get_headers()
+            # remove the '>' from the headers
+            poolheaders = [x[1:] for x in poolheaders]
+            pool_df = pd.DataFrame({'seqName': poolheaders, 'seq_total_length': pool_lengths})
+            # merge pool lengths to coverage_df
+            coverage_df = pd.merge(coverage_df, pool_df, on='seqName', how='left')
+            # calculate the fraction of unique coverage
+            coverage_df['unique_coverage_fraction'] = coverage_df['total_unique_coverage'] / coverage_df['seq_total_length']
+            # Now, merge df2 with this new DataFrame on the 'seqname' column.
+            combstats_summary_wide_merged = pd.merge(combstats_summary_wide, coverage_df, on='seqName', how='left')
             # save the summary dataframe
-            combstats_summary_wide.to_csv(f'{newDir}{outputname}_wide.csv',index=False)
+            combstats_summary_wide_merged.to_csv(f'{newDir}{outputname}_wide.csv',index=False)
 
-            #return combstats_summary_wide
+            return combstats
 
 
 
