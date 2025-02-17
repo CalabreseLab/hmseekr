@@ -40,7 +40,7 @@
 # pval_min is the minimum of seekr pearson correlation p value for each search pool sequence with the query sequences
 # for wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
 # and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min
-# wide format has the unique stats (not included in the long format) that summarize the overall likeliness of each search pool sequence to all the query sequences
+# wide format has the unique column (not included in the long format) that summarize the overall likeliness of each search pool sequence to all the query sequences
 # this stat is listed under the column name 'unique_coverage_fraction' in the wide format dataframe
 # which is the fraction of the total length of the search pool sequence that is covered by the unique hit regions across all the query sequences
 # overlapping hit regions are merged and only the unique regions are counted here
@@ -93,7 +93,7 @@
 # pval_min is the minimum of seekr pearson correlation p value for each search pool sequence with the query sequences
 # in wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
 # and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min
-# wide format has the unique stats (not included in the long format) that summarize the overall likeliness of each search pool sequence to all the query sequences
+# wide format has the unique column (not included in the long format) that summarize the overall likeliness of each search pool sequence to all the query sequences
 # this stat is listed under the column name 'unique_coverage_fraction' in the wide format dataframe
 # which is the fraction of the total length of the search pool sequence that is covered by the unique hit regions across all the query sequences
 # overlapping hit regions are merged and only the unique regions are counted here
