@@ -5,13 +5,9 @@ import argparse
 
 from hmseekr.kmers import kmers
 from hmseekr.train import train
-from hmseekr import findhits
+from hmseekr import findhits_basic
 from hmseekr import findhits_condE
-from hmseekr import findhits_nol
 from hmseekr.gridsearch import gridsearch
-from hmseekr.fastarev import fastarev
-from hmseekr.genbed import genbed
-from hmseekr.genbedrev import genbedrev
 from hmseekr.hitseekr import hitseekr
 from hmseekr.seqstosummary import seqstosummary
 
@@ -72,7 +68,7 @@ Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
 """
 
 
-FINDHITS_DOC = """
+FINDHITS_BASIC_DOC = """
 Description: 
 This program use precalculated model (emission matrix, prepared transition matrix, pi and states) from train function
 to find out HMM state path through sequences of interest
@@ -81,7 +77,7 @@ therefore return sequences that has high similarity to the query sequence -- hit
 Details:
 this function takes in a fasta file which defines the region to search for potential hits (highly similar regions) to the query seq
 also takes in the precalculated model (hmseekr_train function)
-along the searchpool fasta sequences, similarity scores to query seq will be calculated based on the model
+along the searchpool fasta sequences, similarity scores to query seq will be calculated based on the emission probabilities (E) established in the model
 hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment
 kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment
 kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q state minus the log likelihood of them being in the N state
@@ -90,10 +86,10 @@ Example:
 use the previously trained model (hmm.dict by hmseekr_train function) to search for highly similar regions to query seq (repeatA)
 within the pool.fa files (area of interest region to find sequences similar to query, could be all lncRNAs or just chromosome 6) 
 with kmer size 4 and save the hit sequences while showing progress bar
-    $ hmseekr_findhits -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -name 'hits' -dir './models/'  -a 'ATCG' -fa -pb
+    $ hmseekr_findhits_basic -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -name 'hits' -dir './models/'  -a 'ATCG' -fa -pb
 
 minimal code with all settings to default
-    $ hmseekr_findhits -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -fa
+    $ hmseekr_findhits_basic -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -fa
 
 For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
 Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
@@ -103,17 +99,17 @@ Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
 
 FINDHITS_CONDE_DOC = """
 Description: 
-this function is different from the basic findhits function in that it calculates the emission probability of the next word given the current word
+this function is different from the basic findhits_basic function in that it calculates the emission probability of the next word given the current word
 
 Details:
-this is a variant of findhits/hmseekr_findhits function
-in findhits, as the shift is by 1 nt, the next word has k-1 overlap with the current word
+this is a variant of findhits_basic/hmseekr_findhits_basic function
+in findhits_basic, as the shift is by 1 nt, the next word has k-1 overlap with the current word
 for example, if the current word is 'TAGC', the next possible words are 'AGCA', 'AGCT', 'AGCC', 'AGCG'
 then the emission probability of the next word ('AGCA') given the current word as 'TAGC' is calculated as 
 np.log2(emission probability of 'AGCA' in the original E) - np.log2(sum of emission probability of all four possible worlds in the original E)
 
 Example:
-same example as hmseekr_findhits but uses the conditioned emission probability of the next word given the current word
+same example as hmseekr_findhits_basic but uses the conditioned emission probability of the next word given the current word
     $ hmseekr_findhits_condE -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -name 'hits' -dir './models/'  -a 'ATCG' -fa -pb
 
 minimal code with all settings to default
@@ -125,34 +121,6 @@ Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
 """
 
 
-FINDHITS_NOL_DOC = """
-Description: 
-this function is different from the basic findhits in that it uses non-overlapping kmers and shifts the sequence by 1nt each time until the kmer size is reached
-this reduces the kmer dependency of overlapping kmers
-
-Details:
-this is a variant of findhits/hmseekr_findhits function
-if sequence is 'ATGCTTTTGCGC' the kmers would be 'ATGC','TTTT','GCGC'
-then it chops off 1nt from the start of each sequence in the searchpool and re-scan with non-overlapping kmers
-so the sequence would be 'TGCTTTTGCGC' and the kmers would be 'TGCT','TTTG'
-the last bit of sequences that is less than the kmer size would be discarded
-this is done until the kmer size is reached
-in this way, it generates k result txt files each starts at different position of the sequence with non-overlapping kmers
-this function reduces the kmer dependency of overlapping kmers in findhits, but also considered the different combinations of kmers at different start positions
-the outcome txt files can be further process to find the best hit regions: for example, only use the regions that are hits in all k result txt files
-
-Example:
-same example as hmseekr_findhits but uses the non-overlapping kmers 
-    $ hmseekr_findhits_nol -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -name 'hits' -dir './models/'  -a 'ATCG' -fa -pb
-
-minimal code with all settings to default
-    $ hmseekr_findhits_nol -pool './fastaFiles/pool.fa' -m './markovModels/hmm.dict' -k 4 -fa
-
-For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
-Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
-
-"""
-
 
 GRIDSEARCH_DOC = """
 Description: 
@@ -162,9 +130,9 @@ which is used in the train function
 Details:
 this function takes in query sequence, null squence and background sequence (see Inputs for details) fasta files
 ranges and steps or values for query to query transition rate (qT) and null to null transition rate (nT)
-a specific kmer number and performs the train function and findhits function for each combination of qT and nT
-within the hits sequences (findhits function results), only keep the sequence with length greater than lenmin and less than lenmax 
-then calculates pearson correlation r score (seekr.pearson) between the filtered hit sequences (findhits results) and the query sequence
+a specific kmer number and performs the train function and findhits_condE function for each combination of qT and nT
+within the hits sequences (findhits_condE function results), only keep the sequence with length greater than lenmin and less than lenmax 
+then calculates pearson correlation r score (seekr.pearson) between the filtered hit sequences (findhits_condE results) and the query sequence
 it returns a dataframe (.csv file) containing the qT, nT, kmer number, the total number of hits sequences and the median, standard deviation of the hits sequences' pearson correlation r score to the query sequence
 and the median, standard deviation of the length of the hits sequences
 then if there are more than 50 hits, it calculates the same stats for the top 50 hits sequences, ranked by their seekr r score (seekr.pearson) 
@@ -172,13 +140,13 @@ if there are less than 50 hits in total, the stats for the top 50 hits are the s
 if query fasta contains more than one sequence all the sequences in query fasta file will be merged to one sequence 
 for calculating kmer count files for hmseekr (hmseekr.kmers) and for calculating seekr.pearson 
 this function requires the seekr package to be installed
-as there are iterations of train and findhits functions, which could take long time, it is recommended to run this function on a high performance computing cluster
+as there are iterations of train and findhits_condE functions, which could take long time, it is recommended to run this function on a high performance computing cluster
 variants of findhits functions can be specified to run
 
 Example:
 perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99 with step of 0.01, 
-and only keep the hit sequences with length greater than 100 and less than 1000 for stats calculation. the regular findhits function is used
-    $ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.01 -nl 0.9,0.99,0.01 -step -fc 'findhits' -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
+and only keep the hit sequences with length greater than 100 and less than 1000 for stats calculation. the findhits_basic function is used
+    $ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.01 -nl 0.9,0.99,0.01 -step -fc 'findhits_basic' -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
 
 perform a grid search to find the best transition probabilities for qT and nT each exactly as 0.9,0.99,0.999.
 filtering and keep hit sqeuences with length greater than 100 and less than 1000 for stats calculation. 
@@ -192,95 +160,13 @@ Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
 """
 
 
-FASTAREV_DOC = """
-Description: 
-This function reverses a fasta file and save it to a new file
-'ATGC' will be reversed to 'CGTA'
-
-Details:
-this function takes in fasta file and reverse the sequence.
-if input fasta contains more than one sequence, each sequence will be reversed
-the headers will be kept the same, only the sequences will be reversed
-keeping the headers the same will allow the user to match the reversed sequences to the original sequences easily
-the output is a fasta file with the reversed sequences
-
-Example:
-reverse the sequence of mXist repeat A fasta file and save it to a new file while keeping the headers the same
-    $ hmseekr_fastarev -i '../fastaFiles/mXist_rA.fa' -o '../fastaFiles/mXist_rA_rev.fa'
-
-For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
-Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
-
-"""
-
-GENBED_DOC = """
-Description: 
-This function firstly filter the hits output from hmseekr_findhits
-and then generate a bed file for the filtered hits
-this function only applies to the output from hmseekr_findhits with the regular fasta file as input
-for reversed fasta file, please use hmseekr_genbedrev
-
-Details:
-this function takes in the output from hmseekr_findhits and filter the hits based on the hit length and normalized kmerLLR score
-kmerLLR is the log likelihood ratio of of the probability 
-that the set of k-mers y within a hit derived from the QUERY versus the NULL state
-it is the sum of the log2(Q/N) ratio for each kmer within a hit
-the normalized kmerLLR (normLLR) is the kmerLLR divided by the hit length
-so the normLLR is the log2 of the Q/N ratio, i.e. if set normLLR > 0.5, the Q/N ratio is ~ 1.41
-then all the hits after the filtering will be converted to a bedfile
-
-
-Example:
-generate bedfile for filtered hits from the hmseekr_findhits output file mm10expmap_queryA_4_viterbi.txt
-    $ hmseekr_genbed -hd '../mm10expmap_queryA_4_viterbi.txt' -o '../mm10expmap_queryA_4_viterbi' -len 25 -llr 0.5 -pb
-
-minimal code with all settings to default
-    $ hmseekr_genbed -hd '../mm10expmap_queryA_4_viterbi.txt' -o '../mm10expmap_queryA_4_viterbi' 
-
-For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
-Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
-
-"""
-
-
-GENBEDREV_DOC = """
-Description: 
-This function firstly filter the hits output from hmseekr_findhits with the reversed fasta file as input
-and then generate a bed file for the filtered hits
-this function only applies to the output from hmseekr_findhits with the reversed fasta file as input
-for regular or forward fasta file, please use hmseekr_genbed
-
-Details:
-this function takes in the output from hmseekr_findhits with the reversed fasta file as input
-and filter the hits based on the hit length and normalized kmerLLR score
-kmerLLR is the log likelihood ratio of of the probability 
-that the set of k-mers y within a hit derived from the QUERY versus the NULL state
-it is the sum of the log2(Q/N) ratio for each kmer within a hit
-the normalized kmerLLR (normLLR) is the kmerLLR divided by the hit length
-so the normLLR is the log2 of the Q/N ratio, i.e. if set normLLR > 0.5, the Q/N ratio is ~ 1.41
-then all the hits after the filtering will be converted to a bedfile
-
-
-Example:
-generate bedfile for filtered hits from the hmseekr_findhits output file FLIPmm10expmap_queryA_4_viterbi.txt 
-which is generated using the reversed fasta file as input
-    $ hmseekr_genbedrev -hd '../FLIPmm10expmap_queryA_4_viterbi.txt' -o '../FLIPmm10expmap_queryA_4_viterbi' -len 25 -llr 0.5 -pb
-
-minimal code with all settings to default
-    $ hmseekr_genbedrev -hd '../FLIPmm10expmap_queryA_4_viterbi.txt' -o '../FLIPmm10expmap_queryA_4_viterbi' 
-
-For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
-Any issues can be reported to https://github.com/CalabreseLab/hmseekr/issues
-
-"""
-
 
 HITSEEKR_DOC = """
 Description: 
-This function takes in the results of findhits function and calculates the seekr pearson correlation r and p value between the hit sequences and the query sequence
+This function takes in the results of either findhits function and calculates the seekr pearson correlation r and p value between the hit sequences and the query sequence
 
 Details:
-this function takes in the output of findhits function and the query sequence fasta file with a background fasta file
+this function takes in the output of either findhits function and the query sequence fasta file with a background fasta file
 it fit the background sequences to the common10 distributions and takes the best ranked distribution
 it calculates the seekr pearson correlation r and p values between the hit sequences and the query sequence based on the best ranked distribution
 it adds the seekr r and p value to the hits dataframe
@@ -289,7 +175,7 @@ the seekr r and p value could provide additional information about the similarit
 outputname is automatically generated as the input findhits filename with '_seekr' appended to it
 
 Example:
-add seekr p value to the hits dataframe generated by findhits function
+add seekr p value to the hits dataframe generated by either findhits function
     $ hmseekr_hitseekr -hd './mm10_queryA_4_viterbi.txt' -qf './fastaFiles/repeatA.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -li 25 -la 1000 -pf 1.1 -rf -1.1 -dir './' -pb
 
 
@@ -324,7 +210,7 @@ the columns should be '[lenmin,lenmax]' where lenmin is the minimum length of th
 please include 'lenmin' and 'lenmax' as the first row (the column names) for the two columns in the csv file
 the length filter for each query sequence can be different based on the length of the query sequence
 make sure the order of the rows in the transition probability dataframe and length filter csv file matches the order of the query sequences in the fasta file
-the function will run the kmers, train, findhits and hitseekr functions for each query sequence
+the function will run the kmers, train, findhits_condE and hitseekr functions for each query sequence
 then the results can be filtered by the length of the hit regions, the kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value
 finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence
 and also the sum of kmerLLR and length, the median of kmerLLR and seekr pval, and the minimal seekr pval for all the counts of a search pool sequence with each the query sequences
@@ -421,9 +307,9 @@ def console_hmseekr_train():
         )
 
 
-def console_hmseekr_findhits():
+def console_hmseekr_findhits_basic():
     assert sys.version_info >= (3, 9), "Python version must be 3.9"
-    parser = argparse.ArgumentParser(usage=FINDHITS_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(usage=FINDHITS_BASIC_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
     parser.add_argument("-pool","--searchpool",type=str,help='Path to fasta file from which the similarity scores to query seq will be calculated and hits seqs be found', required=True)
     parser.add_argument("-m","--modeldir",type=str,help='Path to precalculated model .dict file output from train.py', required=True)
@@ -436,7 +322,7 @@ def console_hmseekr_findhits():
 
     args = _parse_args_or_exit(parser)
 
-    findhits.findhits(
+    findhits_basic.findhits_basic(
         args.searchpool,
         args.modeldir,
         args.knum,
@@ -475,32 +361,6 @@ def console_hmseekr_findhits_condE():
         )
 
 
-def console_hmseekr_findhits_nol():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9"
-    parser = argparse.ArgumentParser(usage=FINDHITS_NOL_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    
-    parser.add_argument("-pool","--searchpool",type=str,help='Path to fasta file from which the similarity scores to query seq will be calculated and hits seqs be found', required=True)
-    parser.add_argument("-m","--modeldir",type=str,help='Path to precalculated model .dict file output from train.py', required=True)
-    parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be the same as the k value used in training (train function)', required=True)
-    parser.add_argument("-name","--outputname",type=str,help='File name for output, useful to include information about the experiment', default='hits')
-    parser.add_argument("-dir","--outputdir",type=str,help='Directory to save output dataframe',default='./')
-    parser.add_argument("-a","--alphabet",type=str,help='String, Alphabet to generate k-mers (e.g. ATCG)',default='ATCG')
-    parser.add_argument("-fa","--fasta",action='store_true',help='FLAG: save sequence of hit, ignored if --wt is passed')
-    parser.add_argument("-pb","--progressbar",action='store_true',help='when called, progress bar will be shown; if omitted, no progress bar will be shown')
-
-    args = _parse_args_or_exit(parser)
-
-    findhits_nol.findhits_nol(
-        args.searchpool,
-        args.modeldir,
-        args.knum,
-        args.outputname,
-        args.outputdir,
-        args.alphabet,
-        args.fasta,
-        args.progressbar
-        )
-   
 
 
 def console_hmseekr_gridsearch():
@@ -515,7 +375,7 @@ def console_hmseekr_gridsearch():
     parser.add_argument("-ql","--qTlist",type=str,help="Comma delimited string of possible qT (query to query transition) values. For example, 0.1,0.9,0.05 or 0.9,0.99,0.999", required=True)  
     parser.add_argument("-nl","--nTlist",type=str,help="Comma delimited string of possible nT (null to null transition) values. For example, 0.1,0.9,0.05 or 0.9,0.99,0.999", required=True)
     parser.add_argument("-step","--stepmode",action='store_true',help='when called, stepping mode will be applied in generating qT and nT values from qTlist and nTlist (min, max, step); if omitted, qT and nT values will be directly used from qTlist and nTlist')
-    parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits and findhits_condE', default='findhits_condE')
+    parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits_condE and findhits_basic', default='findhits_condE')
     parser.add_argument("-li","--lenmin",type=int,help='keep hits sequences that have length > lenmin, must be one single integer', default=100)
     parser.add_argument("-la","--lenmax",type=int,help='keep hits sequences that have length < lenmax, must be one single integer', default=1000)
     parser.add_argument("-name","--outputname",type=str,help='File name for output dataframe', default='gridsearch_results')
@@ -544,68 +404,11 @@ def console_hmseekr_gridsearch():
         )
     
 
-def console_hmseekr_fastarev():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9"
-    parser = argparse.ArgumentParser(usage=FASTAREV_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    
-    parser.add_argument("-i","--inputdir", type=str,help='Path to input fasta file', required=True)
-    parser.add_argument("-o","--outputdir",type=str,help="Path and name to the output fasta file", required=True)
-    
-    args = _parse_args_or_exit(parser)
-
-    fastarev(
-        args.inputdir,
-        args.outputdir
-        )
-    
-
-def console_hmseekr_genbed():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9"
-    parser = argparse.ArgumentParser(usage=GENBED_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    
-    parser.add_argument("-hd","--hitsdir",type=str,help='path to the input hits file, should be the output from findhits with the regular fasta file as input', required=True)
-    parser.add_argument("-o","--outputdir",type=str,help='path and name to the output bedfile, do not need to add .bed at the end', required=True)
-    parser.add_argument("-len","--lenfilter",type=int,help='the minimum length of the hit, only keep hits that has a length > lenfilter',  default=25)
-    parser.add_argument("-llr","--llrfilter",type=float,help='the minimum normalized kmerLLR score, only keep hits that has a normLLR > llrfilter', default=0.5)
-    parser.add_argument("-pb","--progressbar",action='store_true',help='when called, progress bar will be shown; if omitted, no progress bar will be shown')
-
-    args = _parse_args_or_exit(parser)
-
-    genbed(
-        args.hitsdir,
-        args.outputdir,
-        args.lenfilter,
-        args.llrfilter,
-        args.progressbar
-        )
-
-
-def console_hmseekr_genbedrev():
-    assert sys.version_info >= (3, 9), "Python version must be 3.9"
-    parser = argparse.ArgumentParser(usage=GENBEDREV_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    
-    parser.add_argument("-hd","--hitsdir",type=str,help='path to the input hits file, should be the output from findhits with the reversed fasta file as input', required=True)
-    parser.add_argument("-o","--outputdir",type=str,help='path and name to the output bedfile, do not need to add .bed at the end', required=True)
-    parser.add_argument("-len","--lenfilter",type=int,help='the minimum length of the hit, only keep hits that has a length > lenfilter',  default=25)
-    parser.add_argument("-llr","--llrfilter",type=float,help='the minimum normalized kmerLLR score, only keep hits that has a normLLR > llrfilter', default=0.5)
-    parser.add_argument("-pb","--progressbar",action='store_true',help='when called, progress bar will be shown; if omitted, no progress bar will be shown')
-
-    args = _parse_args_or_exit(parser)
-
-    genbedrev(
-        args.hitsdir,
-        args.outputdir,
-        args.lenfilter,
-        args.llrfilter,
-        args.progressbar
-        )
-
-
 def console_hmseekr_hitseekr():
     assert sys.version_info >= (3, 9), "Python version must be 3.9"
     parser = argparse.ArgumentParser(usage=HITSEEKR_DOC, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     
-    parser.add_argument("-hd","--hitsdir",type=str,help='Path to the hits .txt file that is the output of findhits function', required=True)
+    parser.add_argument("-hd","--hitsdir",type=str,help='Path to the hits .txt file that is the output of either findhits function', required=True)
     parser.add_argument("-qf","--queryfadir",type=str,help='Path to the fasta file of query sequence or sequence of interest (e.g. functional regions of a ncRNA)', required=True)
     parser.add_argument("-bkgf","--bkgfadir", type=str,help='Path to the fasta file of bakground sequences for seekr normalization vectors(see manual for details)', required=True)
     parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be one single integer', required=True)
@@ -643,7 +446,7 @@ def console_hmseekr_seqstosummary():
     parser.add_argument("-pool","--searchpool",type=str,help='Path to fasta file from which the similarity scores to query seq will be calculated and hits seqs be found', required=True)
     parser.add_argument("-bkgf","--bkgfadir", type=str,help='Path to the fasta file of bakground sequences for seekr normalization vectors(see manual for details)', required=True)
     parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be one single integer', required=True)
-    parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits and findhits_condE', default='findhits_condE')
+    parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits_condE and findhits_basic', default='findhits_condE')
     parser.add_argument("-llrf","--llrfilter",type=float,help='only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0', default=0.0)
     parser.add_argument("-pf","--pfilter",type=float,help='only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1.1', default=1.1)
     parser.add_argument("-name","--outputname",type=str,help='File name for output dataframe', default='seqstosummary_results')
@@ -688,13 +491,9 @@ def _run_console_hmseekr_help(version):
     cmds2doc = {
         "hmseekr_kmers": KMERS_DOC,
         "hmseekr_train": TRAIN_DOC,
-        "hmseekr_findhits": FINDHITS_DOC,
+        "hmseekr_findhits_basic": FINDHITS_BASIC_DOC,
         "hmseekr_findhits_condE": FINDHITS_CONDE_DOC,
-        "hmseekr_findhits_nol": FINDHITS_NOL_DOC,
         "hmseekr_gridsearch": GRIDSEARCH_DOC,
-        "hmseekr_fastarev": FASTAREV_DOC,
-        "hmseekr_genbed": GENBED_DOC,
-        "hmseekr_genbedrev": GENBEDREV_DOC,
         "hmseekr_hitseekr": HITSEEKR_DOC,
         "hmseekr_seqstosummary": SEQSTOSUMMARY_DOC,
     }

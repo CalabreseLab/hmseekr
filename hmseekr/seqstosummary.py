@@ -24,7 +24,7 @@
 # please include 'lenmin' and 'lenmax' as the first row (the column names) for the two columns in the csv file
 # the length filter for each query sequence can be different based on the length of the query sequence
 # make sure the order of the rows in the transition probability dataframe and length filter csv file matches the order of the query sequences in the fasta file
-# the function will run the kmers, train, findhits and hitseekr functions for each query sequence
+# the function will run the kmers, train, findhits_condE and hitseekr functions for each query sequence
 # then the results can be filtered by the length of the hit regions, the kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value
 # finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence
 # and also the sum of kmerLLR and length, the median of kmerLLR and seekr pval, and the minimal seekr pval for all the counts of a search pool sequence with each the query sequences
@@ -66,7 +66,7 @@
 # bkgfadir: fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function
 # this fasta file can be different from the nullfadir fasta file
 # knum: a single integer value for kmer number
-# func: the function to use for finding hits, default='findhits_condE', other options include 'findhits'
+# func: the function to use for finding hits, default='findhits_condE', the other option is 'findhits_basic'
 # llrfilter: only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0. if no filter is needed, set to 0
 # kmerLLR is the log likelihood ratio of of the probability 
 # that the set of k-mers y within a hit derived from the QUERY versus the NULL state
@@ -246,15 +246,15 @@ def seqstosummary(queryfadir, transdf, lenfilter, nullfadir, searchpool, bkgfadi
             return None
 
     # load in corresponding findhits function
-    if func == 'findhits':
-        from hmseekr import findhits
-        from hmseekr.findhits import findhits as findhits_cur
+    if func == 'findhits_basic':
+        from hmseekr import findhits_basic
+        from hmseekr.findhits_basic import findhits_basic as findhits_cur
     elif func == 'findhits_condE':
         from hmseekr import findhits_condE
         from hmseekr.findhits_condE import findhits_condE as findhits_cur
     else:
         print('Please specify a valid function for finding hits')
-        print('Options include: findhits, findhits_condE,')
+        print('Options include: findhits_condE, findhits_basic')
         return None
     
 

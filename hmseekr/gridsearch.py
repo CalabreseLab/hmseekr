@@ -6,9 +6,9 @@
 ### Details:
 # this function takes in query sequence, null squence and background sequence (see Inputs for details) fasta files
 # ranges and steps for query to query transition rate (qT) and null to null transition rate (nT)
-# a specific kmer number and performs the train function and findhits function for each combination of qT and nT
-# within the hits sequences (findhits function results), only keep the sequence with length less than lenmax and greater than lenmin 
-# then calculates pearson correlation r score (seekr.pearson) between the filtered hit sequences (findhits results) and the query sequence
+# a specific kmer number and performs the train function and findhits_condE function for each combination of qT and nT
+# within the hits sequences (findhits_condE function results), only keep the sequence with length less than lenmax and greater than lenmin 
+# then calculates pearson correlation r score (seekr.pearson) between the filtered hit sequences (findhits_condE results) and the query sequence
 # it returns a dataframe (.csv file) containing the qT, nT, kmer number, the total number of hits sequences and the median, standard deviation of the hits sequences' pearson correlation r score to the query sequence
 # and the median, standard deviation of the length of the hits sequences
 # then if there are more than 50 hits, it calculates the same stats for the top 50 hits sequences, ranked by their seekr r score (seekr.pearson) 
@@ -16,7 +16,7 @@
 # if query fasta contains more than one sequence, all the sequences in query fasta file will be merged to one sequence 
 # for calculating kmer count files for hmseekr (hmseekr.kmers) and for calculating seekr.pearson 
 # this function requires the seekr package to be installed
-# as there are iterations of train and findhits functions, which could take long time, it is recommended to run this function on a high performance computing cluster
+# as there are iterations of train and findhits_condE functions, which could take long time, it is recommended to run this function on a high performance computing cluster
 # variants of findhits functions can be specified to run
 
 
@@ -35,7 +35,7 @@
 # the min, max, step values are used to generate a list of qT values, with min and max included. all the numbers that are greater than 0 and less than 1 are used as qT values in the iteration.
 # nTlist: specify probability of null to null transition. the setting is the same as in qTlist.
 # stepmode: True or False, defines whether to use the qTlist and nTlist as min, max, step or as a list of values for qT and nT. Default is True: use qTlist and nTlist as min, max, step.
-# func: the function to use for finding hits, default='findhits_condE', other options include 'findhits' 
+# func: the function to use for finding hits, default='findhits_condE', the other option is 'findhits_basic' 
 # lenmin: keep hits sequences that have length > lenmin for calculating stats in the output, default=100. 
 # lenmax: keep hits sequences that have length < lenmax for calculating stats in the output, default=1000.
 # outputname: File name for output dataframe, default='gridsearch_results'
@@ -58,7 +58,7 @@
 #                         searchpool='../fastaFiles/pool.fa',
 #                         bkgfadir='/Users/shuang/mSEEKR/fastaFiles/vM25.lncRNA.can.500.nodup.fa',knum=4, 
 #                         qTlist='0.9,0.99,0.05', nTlist='0.99,0.999,0.005', stepmode=True,
-#                         func='findhits', lenmin=25, lenmax=2000, 
+#                         func='findhits_basic', lenmin=25, lenmax=2000, 
 #                         outputname='gridsearch_results', 
 #                         outputdir='/Users/shuang/gridsearch/', 
 #                         alphabet='ATCG', progressbar=True)
@@ -112,15 +112,15 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
             return None
 
     # load in corresponding findhits function
-    if func == 'findhits':
-        from hmseekr import findhits
-        from hmseekr.findhits import findhits as findhits_cur
+    if func == 'findhits_basic':
+        from hmseekr import findhits_basic
+        from hmseekr.findhits_basic import findhits_basic as findhits_cur
     elif func == 'findhits_condE':
         from hmseekr import findhits_condE
         from hmseekr.findhits_condE import findhits_condE as findhits_cur
     else:
         print('Please specify a valid function for finding hits')
-        print('Options include: findhits, findhits_condE')
+        print('Options include: findhits_condE, findhits_basic')
         return None
 
 
