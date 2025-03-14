@@ -62,13 +62,9 @@ setup(
         "console_scripts": [
             "hmseekr_kmers = hmseekr.console_scripts:console_hmseekr_kmers",
             "hmseekr_train = hmseekr.console_scripts:console_hmseekr_train",
-            "hmseekr_findhits = hmseekr.console_scripts:console_hmseekr_findhits",
+            "hmseekr_findhits_basic = hmseekr.console_scripts:console_hmseekr_findhits_basic",
             "hmseekr_findhits_condE = hmseekr.console_scripts:console_hmseekr_findhits_condE",
-            "hmseekr_findhits_nol = hmseekr.console_scripts:console_hmseekr_findhits_nol",
             "hmseekr_gridsearch = hmseekr.console_scripts:console_hmseekr_gridsearch",
-            "hmseekr_fastarev = hmseekr.console_scripts:console_hmseekr_fastarev",
-            "hmseekr_genbed = hmseekr.console_scripts:console_hmseekr_genbed",
-            "hmseekr_genbedrev = hmseekr.console_scripts:console_hmseekr_genbedrev",
             "hmseekr_hitseekr = hmseekr.console_scripts:console_hmseekr_hitseekr",
             "hmseekr_seqstosummary = hmseekr.console_scripts:console_hmseekr_seqstosummary",
             "hmseekr = hmseekr.console_scripts:console_hmseekr_help"
