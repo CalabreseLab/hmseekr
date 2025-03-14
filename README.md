@@ -133,27 +133,26 @@ testmodel = train(querydir='./counts/repeatA.dict', nulldir='./counts/all_lncRNA
     .
 
 
-### findhits: find high similar regions based on kmer profile within sequences of interest
+### findhits_basic: find high similar regions based on kmer profile within sequences of interest 
 
-This step uses precalculated model (emission matrix, prepared transition matrix, pi and states) from train (hmseekr_train) function to find out HMM state path through sequences of interest, therefore return sequences that has high similarity (based on kmer profile) to the query sequence -- hits sequneces. This function takes in a fasta file (searchpool) which defines the region to search for potential hits (highly similar regions to the query sequence), also takes in the precalculated model (train or hmseekr_train function). Along the searchpool fasta sequences, similarity scores to query sequence will be calculated based on the model, hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment, kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment. kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q (query) state minus the log likelihood of them being in the N (null) state. 
+This step uses precalculated model (emission matrix, prepared transition matrix, pi and states) from train (hmseekr_train) function to find out HMM state path through sequences of interest, therefore return sequences that has high similarity (based on kmer profile) to the query sequence -- hits sequneces. This function takes in a fasta file (searchpool) which defines the region to search for potential hits (highly similar regions to the query sequence), also takes in the precalculated model (train or hmseekr_train function). Along the searchpool fasta sequences, similarity scores to query sequence will be calculated based on the emission probabilities (E) established in the model, hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment, kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment. kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q (query) state minus the log likelihood of them being in the N (null) state. 
 
 
 #### Console Example:
 use the previously trained model (hmm.dict by train/hmseekr_train function) to search for highly similar regions to query sequence (repeatA) within the pool.fa files (area of interest region to find sequences similar to repeatA, could be all lncRNAs or just chromosome 6) with kmer size 4 and save the hit sequences while showing progress bar.
 ```
-hmseekr_findhits -pool './fastaFiles/pool.fa' -m './markovModels/repeatA_lncRNA/4/hmm.dict' -k 4 -name 'hits' -dir './models/' -a 'ATCG' -fa -pb
+hmseekr_findhits_basic -pool './fastaFiles/pool.fa' -m './markovModels/repeatA_lncRNA/4/hmm.dict' -k 4 -name 'hits' -dir './models/' -a 'ATCG' -fa -pb
 ```
 
 #### Python Example:
 use the previously trained model (hmm.dict by train/hmseekr_train function) to search for highly similar regions to query sequence (repeatA) within the pool.fa files (area of interest region to find sequences similar to repeatA, could be all lncRNAs or just chromosome 6) with kmer size 4 and save the hit sequences while showing progress bar.
 ```python
-from hmseekr.findhits import findhits
+from hmseekr.findhits_basic import findhits_basic
 
-testhits = findhits(searchpool='./fastaFiles/pool.fa',
-                    modeldir='./markovModels/repeatA_lncRNA/4/hmm.dict',
-                    knum=4,outputname='hits',outputdir='./',
-                    alphabet='ATCG',fasta=True,
-                    progressbar=True)
+testhits = findhits_basic(searchpool='./fastaFiles/pool.fa',
+                          modeldir='./markovModels/repeatA_lncRNA/4/hmm.dict',
+                          knum=4,outputname='hits',outputdir='./', 
+                          alphabet='ATCG',fasta=True,progressbar=True)
 ```
 
 #### Inputs:
@@ -171,23 +170,24 @@ testhits = findhits(searchpool='./fastaFiles/pool.fa',
 A dataframe containing information about the hit regions: highly similar regions to query sequence based on the precalculated model within the input fasta file. Information about the hits regions includes: the sequence header from the input fasta file, start and end location of the hit segment, kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment if fasta=True.
 
 
-### findhits_condE: findhits with conditioned Emission probabilities 
+### findhits_condE: findhits_basic with conditioned Emission probabilities 
 
-this is a variant of findhits/hmseekr_findhits function: it calculates the emission probability of the next word given the current word
-in findhits, as the shift is by 1 nt, the next word has k-1 overlap with the current word
+this is an advanced version of findhits_basic/hmseekr_findhits_basic function: it calculates the emission probability of the next word given the current word.
+in findhits_basic, as the shift is by 1 nt, the next word has k-1 overlap with the current word
 for example, if the current word is 'TAGC', the next possible words are 'AGCA', 'AGCT', 'AGCC', 'AGCG'
 then the emission probability of the next word ('AGCA') given the current word as 'TAGC' is calculated as 
 np.log2(emission probability of 'AGCA' in the original E) - np.log2(sum of emission probability of all four possible worlds in the original E)
+findhits_condE is the default findhits function in higher level functions such as gridsearch or seqstosummary
 
 
 #### Console Example:
-same example as hmseekr_findhits but with the conditioned emission probability
+same example as hmseekr_findhits_basic but with the conditioned emission probability
 ```
 hmseekr_findhits_condE -pool './fastaFiles/pool.fa' -m './markovModels/repeatA_lncRNA/4/hmm.dict' -k 4 -name 'hits' -dir './models/' -a 'ATCG' -fa -pb
 ```
 
 #### Python Example:
-same example as findhits but with the conditioned emission probability
+same example as findhits_basic but with the conditioned emission probability
 ```python
 from hmseekr.findhits_condE import findhits_condE
 
@@ -200,60 +200,19 @@ testhits = findhits_condE(searchpool='../fastaFiles/pool.fa',
 
 #### Inputs and Output:
 
-Inputs and Output are in the same format as findhits/hmseekr_findhits function
-
-
-### findhits_nol: findhits with non-overlapping kmers
-
-this is a variant of findhits/hmseekr_findhits function: it uses non-overlapping kmers and shifts the sequence by 1nt each time until the kmer size is reached. in this way, it reduces the kmer dependency of overlapping kmers.
-if sequence is 'ATGCTTTTGCGC' the kmers would be 'ATGC','TTTT','GCGC'
-then it chops off 1nt from the start of each sequence in the searchpool and re-scan with non-overlapping kmers
-so the sequence would be 'TGCTTTTGCGC' and the kmers would be 'TGCT','TTTG'
-the last bit of sequences that is less than the kmer size would be discarded
-this is done until the kmer size is reached
-in this way, it generates k result txt files each starts at different position of the sequence with non-overlapping kmers
-this function reduces the kmer dependency of overlapping kmers in findhits, but also considered the different combinations of kmers at different start positions
-the outcome txt files can be further process to find the best hit regions
-for example, only use the regions that are hits in all k result txt files
-
-#### Console Example:
-same example as hmseekr_findhits but with non-overlapping kmers 
-```
-hmseekr_findhits_nol -pool './fastaFiles/pool.fa' -m './markovModels/repeatA_lncRNA/4/hmm.dict' -k 4 -name 'hits' -dir './models/' -a 'ATCG' -fa -pb
-```
-
-#### Python Example:
-same example as findhits but with non-overlapping kmers 
-```python
-from hmseekr.findhits_nol import findhits_nol
-
-testhits = findhits_nol(searchpool='../fastaFiles/pool.fa',
-                        modeldir='../markovModels/hmm.dict',
-                        knum=4,outputname='hits',outputdir='./',
-                        alphabet='ATCG',fasta=True,
-                        progressbar=True)
-```
-
-#### Inputs:
-
-Inputs are in the same format as findhits/hmseekr_findhits function
-
-#### Output:
-
-Output has the same format as findhits/hmseekr_findhits function. But instead of one output txt file, it will generate k output txt files, each corresponds to a shift position. 
-
+Inputs and Output are in the same format as findhits_basic/hmseekr_findhits_basic function
 
 
 ### gridsearch: search for best transition probabilities
 
-This function performs a grid search to find the best trasnition probabilities for query to query and null to null states, which is used in the train function. This function takes in query sequence, null squence and background sequence (see Inputs for details) fasta files, ranges and steps or values for query to query transition rate (qT) and null to null transition rate (nT), a specific kmer number and performs the train function and findhits function for each combination of qT and nT. Within the hits sequences (findhits function results), only keep the sequence with length greater than lenmin and less than lenmax. Then calculates pearson correlation r score (seekr.pearson) between the filtered hit sequences (findhits results) and the query sequence. It returns a dataframe (.csv file) containing the qT, nT, kmer number, the total number of hits sequences and the median, standard deviation of the hits sequences' pearson correlation r score to the query sequence and the median, standard deviation of the length of the hits sequences. Then if there are more than 50 hits, it calculates the same stats for the top 50 hits sequences, ranked by their seekr r score (seekr.pearson); if there are less than 50 hits in total, the stats for the top 50 hits are the same as the stats for all the hits. If query fasta contains more than one sequence, all the sequences in query fasta file will be merged to one sequence, for calculating kmer count files for hmseekr (hmseekr.kmers) and for calculating seekr.pearson. This function requires the seekr package to be installed. As there are iterations of train and findhits functions, which could take long time, it is recommended to run this function on a high performance computing cluster. Variants of findhits functions can be specified to run.
+This function performs a grid search to find the best trasnition probabilities for query to query and null to null states, which is used in the train function. This function takes in query sequence, null squence and background sequence (see Inputs for details) fasta files, ranges and steps or values for query to query transition rate (qT) and null to null transition rate (nT), a specific kmer number and performs the train function and findhits_condE function for each combination of qT and nT. Within the hits sequences (findhits_condE function results), only keep the sequence with length greater than lenmin and less than lenmax. Then calculates pearson correlation r score (seekr.pearson) between the filtered hit sequences (findhits_condE results) and the query sequence. It returns a dataframe (.csv file) containing the qT, nT, kmer number, the total number of hits sequences and the median, standard deviation of the hits sequences' pearson correlation r score to the query sequence and the median, standard deviation of the length of the hits sequences. Then if there are more than 50 hits, it calculates the same stats for the top 50 hits sequences, ranked by their seekr r score (seekr.pearson); if there are less than 50 hits in total, the stats for the top 50 hits are the same as the stats for all the hits. If query fasta contains more than one sequence, all the sequences in query fasta file will be merged to one sequence, for calculating kmer count files for hmseekr (hmseekr.kmers) and for calculating seekr.pearson. This function requires the seekr package to be installed. As there are iterations of train and findhits_condE functions, which could take long time, it is recommended to run this function on a high performance computing cluster. Variants of findhits functions can be specified to run.
 
 
 #### Console Example:
-perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99 with step of 0.01, and only keep the hit sequences with length greater than 100nt and less than 1000nt for stats calculation. the regular 'findhits' function is used here.
+perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99 with step of 0.01, and only keep the hit sequences with length greater than 100nt and less than 1000nt for stats calculation. the 'findhits_basic' function is used here.
 
 ```
-hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.01 -nl 0.9,0.99,0.01 -step -fc 'findhits' -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
+hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/pool.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -ql 0.9,0.99,0.01 -nl 0.9,0.99,0.01 -step -fc 'findhits_basic' -li 100 -la 1000 -name 'gridsearch_results' -dir './gridsearch/' -a 'ATCG' -pb
 ```
 
 
@@ -264,7 +223,7 @@ hmseekr_gridsearch -qf './fastaFiles/repeatA.fa' -nf './fastaFiles/all_lncRNA.fa
 ```
 
 #### Python Example:
-perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99, and only keep the hit sequences with length greater than 100nt and less than 1000nt for stats calculation. the regular 'findhits' function is used here.
+perform a grid search to find the best transition probabilities for qT and nT each within the range of 0.9 to 0.99, and only keep the hit sequences with length greater than 100nt and less than 1000nt for stats calculation. the 'findhits_basic' function is used here.
 
 ```python
 from hmseekr.gridsearch import gridsearch
@@ -275,7 +234,7 @@ testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa',
                         bkgfadir='./fastaFiles/bkg.fa',
                         knum=4, qTlist='0.9,0.99,0.01', 
                         nTlist='0.99,0.999,0.001', 
-                        stepmode=True,func='findhits', 
+                        stepmode=True,func='findhits_basic', 
                         lenmin=100, lenmax=1000, 
                         outputname='gridsearch_results', 
                         outputdir='./gridsearch/', 
@@ -312,7 +271,7 @@ testsearch = gridsearch(queryfadir='./fastaFiles/repeatA.fa',
 6. qTlist (-ql): specify probability of query to query transition. if stepmode is False, the input should be a string of numbers separated by commas: '0.9,0.99,0.999' with no limit on the length of the list. all the numbers in the list that are  greater than 0 and less than 1 are used as qT values in the iteration. if stepmode is True, the input should be a string of exactly three numbers separated by commas: '0.1,0.9,0.05' as min, max, step. the min, max, step values are used to generate a list of qT values, with min and max included. all the numbers that are greater than 0 and less than 1 are used as qT values in the iteration.
 7. nTlist (-nl): specify probability of null to null transition. the setting is the same as in qTlist.
 8. stepmode (-step): True or False, defines whether to use the qTlist and nTlist as min, max, step or as a list of values for qT and nT. Default is True: use qTlist and nTlist as min, max, step.
-9. func (-fc): the function to use for finding hits, default='findhits_condE', other options include 'findhits'
+9. func (-fc): the function to use for finding hits, default='findhits_condE', the other option is 'findhits_basic'
 10. lenmin (-li): keep hits sequences that have length > lenmin for calculating stats in the output, default=100. 
 11. lenmax (-la): keep hits sequences that have length < lenmax for calculating stats in the output, default=1000.
 12. outputname (-name): File name for output dataframe, default='gridsearch_results'
@@ -325,114 +284,19 @@ a dataframe containing information about qT, nT, kmer number, the total number o
 
 
 
-### fastarev: reverse fasta sequences
-
-This function reverses a fasta file and save it to a new file:'ATGC' will be reversed to 'CGTA'. This function takes in fasta file and reverse the sequence. If input fasta contains more than one sequence, each sequence will be reversed. Headers will be kept the same, only the sequences will be reversed. Keeping the headers the same will allow the user to match the reversed sequences to the original sequences easily. 
-
-#### Console Example:
-reverse the sequence of mouse Xist repeat A fasta file and save it to a new file while keeping the headers the same
-```
-hmseekr_fastarev -i '../fastaFiles/mXist_rA.fa' -o '../fastaFiles/mXist_rA_rev.fa'
-```
-
-#### Python Example:
-reverse the sequence of mouse Xist repeat A fasta file and save it to a new file while keeping the headers the same
-```python
-from hmseekr.fastarev import fastarev
-
-fastarev(input_file_path='../fastaFiles/mXist_rA.fa',
-         output_file_path='../fastaFiles/mXist_rA_rev.fa')
-```
-
-#### Inputs:
-
-1. input_file_path (-i): path to the input fasta file.
-2. output_file_path (-o): path and name to the output fasta file.
-
-
-#### Output:
-A fasta file with the reversed sequences and the SAME headers as the input fasta file. If the input fasta file contains more than one sequence, each sequence will be reversed.
-
-
-### genbed: filter hits sequences and generate bedfiles for regular/forward fasta
-
-This function firstly filter the hits output from findhits/hmseekr_findhits and then generate a bed file for the filtered hits. This function only applies to the output from findhits/hmseekr_findhits with the regular fasta file as input. For reversed fasta file, please use genbedrev/hmseekr_genbedrev. This function takes in the output from hmseekr_findhits and filter the hits based on the hit length and normalized kmerLLR score. kmerLLR is the log likelihood ratio of of the probability that the set of k-mers y within a hit derived from the QUERY versus the NULL state. It is the sum of the log2(Q/N) ratio for each kmer within a hit. The normalized kmerLLR (normLLR) is the kmerLLR divided by the hit length. So the normLLR is the log2 of the Q/N ratio, i.e. if set normLLR > 0.5, the Q/N ratio is ~ 1.41. Then all the hits after the filtering will be converted to a bedfile
-
-#### Console Example:
-generate bedfile for filtered hits from the hmseekr_findhits output file mm10expmap_queryA_4_viterbi.txt
-```
-hmseekr_genbed -hd '../mm10expmap_queryA_4_viterbi.txt' -o '../mm10expmap_queryA_4_viterbi' -len 25 -llr 0.5 -pb
-```
-
-#### Python Example:
-generate bedfile for filtered hits from the findhits output file mm10expmap_queryA_4_viterbi.txt
-```python
-from hmseekr.genbed import genbed
-
-testbed = genbed(hitsdir='../mm10expmap_queryA_4_viterbi.txt', 
-                 outputdir='../mm10expmap_queryA_4_viterbi',
-                 lenfilter=25, llrfilter=0.5,progressbar=True)
-```
-
-#### Inputs:
-
-1. hitsdir (-hd): path to the input hits file, should be the output from findhits with the regular fasta file as input. please use genbedrev/hmseekr_genbedrev for the reversed fasta file 
-2. outputdir (-o): path and name to the output bedfile, do not need to add .bed at the end
-3. lenfilter (-len): the minimum length of the hit, only keep hits that has a length > lenfilter, default is 25
-4. llrfilter (-llr): the minimum normalized kmerLLR score, only keep hits that has a normLLR > llrfilter, default is 0.5
-5. progressbar (-pb): whether to show the progress bar, default is True
-
-
-#### Output:
-A bedfile with the following columns: 'chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand' for all hits that passed the filtering. 'score' is the normLLR score, 'name' is 'fwd' as it should only be applied for the regular fasta file. For reversed fasta file, please use genbedrev/hmseekr_genbedrev
-
-
-### genbedrev: filter hits sequences and generate bedfiles for reversed fasta
-
-This function firstly filter the hits output from findhits/hmseekr_findhits with the reversed fasta file as input and then generate a bed file for the filtered hits. This function only applies to the output from findhits/hmseekr_findhits with the reversed fasta file as input for regular or forward fasta file, please use genbed/hmseekr_genbed. This function takes in the output from findhits/hmseekr_findhits with the reversed fasta file as input and filter the hits based on the hit length and normalized kmerLLR score. kmerLLR is the log likelihood ratio of of the probability that the set of k-mers y within a hit derived from the QUERY versus the NULL state. It is the sum of the log2(Q/N) ratio for each kmer within a hit. The normalized kmerLLR (normLLR) is the kmerLLR divided by the hit length. So the normLLR is the log2 of the Q/N ratio, i.e. if set normLLR > 0.5, the Q/N ratio is ~ 1.41. Then all the hits after the filtering will be converted to a bedfile.
-
-#### Console Example:
-generate bedfile for filtered hits from the hmseekr_findhits output file FLIPmm10expmap_queryA_4_viterbi.txt, which is generated using the reversed fasta file as input
-```
-hmseekr_genbedrev -hd '../FLIPmm10expmap_queryA_4_viterbi.txt' -o '../FLIPmm10expmap_queryA_4_viterbi' -len 25 -llr 0.5 -pb
-```
-
-#### Python Example:
-generate bedfile for filtered hits from the findhits output file FLIPmm10expmap_queryA_4_viterbi.txt, which is generated using the reversed fasta file as input
-```python
-from hmseekr.genbedrev import genbedrev
-
-testbed = genbedrev(hitsdir='../FLIPmm10expmap_queryA_4_viterbi.txt', 
-                    outputdir='../FLIPmm10expmap_queryA_4_viterbi',
-                    lenfilter=25, llrfilter=0.5,progressbar=True)
-```
-
-#### Inputs:
-
-1. hitsdir (-hd): path to the input hits file, should be the output from findhits with the reversed fasta file as input. please use genbed/hmseekr_genbed for the regular/forward fasta file 
-2. outputdir (-o): path and name to the output bedfile, do not need to add .bed at the end
-3. lenfilter (-len): the minimum length of the hit, only keep hits that has a length > lenfilter, default is 25
-4. llrfilter (-llr): the minimum normalized kmerLLR score, only keep hits that has a normLLR > llrfilter, default is 0.5
-5. progressbar (-pb): whether to show the progress bar, default is True
-
-
-#### Output:
-A bedfile with the following columns: 'chrom', 'chromStart', 'chromEnd', 'name', 'score', 'strand' for all hits that passed the filtering. 'score' is the normLLR score, 'name' is 'rev' as it should only be applied for the reversed fasta file. For regular/forward fasta file, please use genbed/hmseekr_genbed.
-
-
 ### hitseekr: add seekr p values
 
-This function takes in the output of findhits function and the query sequence fasta file with a background fasta file, and calculates the seekr pearson correlation r and p value between the hit sequences and the query sequence. It fit the background sequences to the common10 distributions and takes the best ranked distribution. It calculates the seekr pearson correlation r and p values between the hit sequences and the query sequence based on the best ranked distribution. It adds the seekr r and p value to the hits dataframe on top of the existing kmer log likelihood score (kmerLLR). The seekr r and p value could provide additional information about the similarity between the hit sequences and the query sequence.
+This function takes in the output of either findhits function and the query sequence fasta file with a background fasta file, and calculates the seekr pearson correlation r and p value between the hit sequences and the query sequence. It fit the background sequences to the common10 distributions and takes the best ranked distribution. It calculates the seekr pearson correlation r and p values between the hit sequences and the query sequence based on the best ranked distribution. It adds the seekr r and p value to the hits dataframe on top of the existing kmer log likelihood score (kmerLLR). The seekr r and p value could provide additional information about the similarity between the hit sequences and the query sequence.
 
 #### Console Example:
-add seekr r and p value to the hits dataframe generated by findhits function, keeping hits with length between 100nt and 1000nt and have seekr p values less than 0.5 and r value greater than 0
+add seekr r and p value to the hits dataframe generated by either findhits function, keeping hits with length between 100nt and 1000nt and have seekr p values less than 0.5 and r value greater than 0
 
 ```
 hmseekr_hitseekr -hd './mm10_queryA_4_viterbi.txt' -qf './fastaFiles/repeatA.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -li 100 -la 1000 -pf 0.5 -rf 0 -dir './' -pb
 ```
 
 #### Python Example:
-add seekr p value to the hits dataframe generated by findhits function, keeping hits with length between 100nt and 1000nt and have seekr p values less than 0.5 and r value greater than 0
+add seekr p value to the hits dataframe generated by either findhits function, keeping hits with length between 100nt and 1000nt and have seekr p values less than 0.5 and r value greater than 0
 
 ```python
 from hmseekr.hitseekr import hitseekr
@@ -447,7 +311,7 @@ addpvals = hitseekr(hitsdir='./mm10_queryA_4_viterbi.txt',
 
 #### Inputs:
 
-1. hitsdir (-hd): Path to the directory of the .txt file generated by findhits function
+1. hitsdir (-hd): Path to the directory of the .txt file generated by either findhits function
 2. queryfadir (-qf): Path to the fasta file of query seq (e.g. functional regions of a ncRNA). If query fasta contains more than one sequence, all the sequences in query fasta file will be merged to one sequence for calculating seekr.pearson and for calculating kmer count files for hmseekr
 3. bkgfadir (-bkgf): fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function. This fasta file can be different from the nullfadir fasta file
 4. knum (-k): a single integer value for kmer number, must be the same as the kmer number used in the findhits function
@@ -465,7 +329,7 @@ outputname is automatically generated as the input findhits filename with '\_see
 
 ### seqstosummary: search and quantify multiple features
 
-This function is designed to get the overall likeliness of each search pool sequence to the query sequences. The function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a length filter file, a search pool fasta file, a null fasta file (for hmseekr) and a background fasta file (for seekr). Here the transition probability dataframe must have the same rows as the query fasta file. The columns should be '\[qT,nT\]' where qT is the probability of query to query transition, nT is the probability of null to null transition The transition prbability for each query sequence can be different and can be optimized by the gridsearch function. Please include 'qT' and 'nT' as the first row (the column names) for the two columns in the csv file. Please check the transdf.csv file in the repository for an example. Users can also choose to set the transition probability to be the same for all query sequences. The length filter file should have the same rows as the query fasta file, the columns should be '\[lenmin,lenmax\]' where lenmin is the minimum length of the hit region to keep (\>lenmin) and lenmax is the maximum length of the hit region to keep (\<lenmax). Please include 'lenmin' and 'lenmax' as the first row (the column names) for the two columns in the csv file. The length filter for each query sequence can be different based on the length of the query sequence. Please check the lenfilter.csv file in the repository for an example. Make sure the order of the rows in the transition probability dataframe and length filter file matches the order of the query sequences in the fasta file. The function will run the kmers, train, findhits and hitseekr functions for each query sequence. Then the results can be filtered by the length of the hit regions, the kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value. Finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence, and also the sum of kmerLLR and length, and median of kmerLLR and seekr pval, and the minimal seekr pval for all the counts of a search pool sequence with each the query sequences. For long format each row of the output dataframe contains a sequence in the search pool fasta, and has eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; len_sum is the sum of the length of all counts of a search pool sequence with the query sequences; LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences; pval_min is the minimum of seekr pearson correlation p value for each search pool sequence with the query sequences
+This function is designed to get the overall likeliness of each search pool sequence to the query sequences. The function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a length filter file, a search pool fasta file, a null fasta file (for hmseekr) and a background fasta file (for seekr). Here the transition probability dataframe must have the same rows as the query fasta file. The columns should be '\[qT,nT\]' where qT is the probability of query to query transition, nT is the probability of null to null transition The transition prbability for each query sequence can be different and can be optimized by the gridsearch function. Please include 'qT' and 'nT' as the first row (the column names) for the two columns in the csv file. Please check the transdf.csv file in the repository for an example. Users can also choose to set the transition probability to be the same for all query sequences. The length filter file should have the same rows as the query fasta file, the columns should be '\[lenmin,lenmax\]' where lenmin is the minimum length of the hit region to keep (\>lenmin) and lenmax is the maximum length of the hit region to keep (\<lenmax). Please include 'lenmin' and 'lenmax' as the first row (the column names) for the two columns in the csv file. The length filter for each query sequence can be different based on the length of the query sequence. Please check the lenfilter.csv file in the repository for an example. Make sure the order of the rows in the transition probability dataframe and length filter file matches the order of the query sequences in the fasta file. The function will run the kmers, train, findhits_condE and hitseekr functions for each query sequence. Then the results can be filtered by the length of the hit regions, the kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value. Finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence, and also the sum of kmerLLR and length, and median of kmerLLR and seekr pval, and the minimal seekr pval for all the counts of a search pool sequence with each the query sequences. For long format each row of the output dataframe contains a sequence in the search pool fasta, and has eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; len_sum is the sum of the length of all counts of a search pool sequence with the query sequences; LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences; pval_min is the minimum of seekr pearson correlation p value for each search pool sequence with the query sequences
 For wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min. Wide format has the unique column (not included in the long format) that summarize the overall likeliness of each search pool sequence to all the query sequences. This stat is listed under the column name **'unique_coverage_fraction'**, which is the fraction of the total length of the search pool sequence that is covered by the unique hit regions across all the query sequences. Overlapping hit regions are merged and only the unique regions are counted here. It also includes columns for the total length of each pool seq (seq_total_length) and the total length of the unique hit regions across all the query sequences (total_unique_coverage). The output dataframe can then be used to generalize an overall likeliness of each search pool sequence to all the query sequences
 
 
@@ -504,7 +368,7 @@ testsum = seqstosummary(queryfadir='./fastaFiles/mXist_repeats.fa',
 5. searchpool (-pool): Path to fasta file which defines the region to search for potential hits (highly similar regions) based on the precalculated model (train function)
 6. bkgfadir (-bkgf): fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function. This fasta file can be different from the nullfadir fasta file
 7. knum (-k): a single integer value for kmer number
-8. func (-fc): the function to use for finding hits, default='findhits_condE', other options include 'findhits'
+8. func (-fc): the function to use for finding hits, default='findhits_condE', the other option is 'findhits_basic'
 9. llrfilter (-llrf): only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0. if no filter is needed, set to 0. kmerLLR is the log likelihood ratio of of the probability that the set of k-mers y within a hit derived from the QUERY versus the NULL state. It is the sum of the log2(Q/N) ratio for each kmer within a hit. 
 10. pfilter (-pf): only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1.1. if no filter is needed, set to 1.1
 11. outputname (-name): File name for output dataframe, default='seqstosummary_results'
@@ -515,240 +379,6 @@ testsum = seqstosummary(queryfadir='./fastaFiles/mXist_repeats.fa',
 
 #### Output:
 a dataframe in long format: where each row contains a sequence in the search pool fasta file, and eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min: seqName corresponds to the header in the search pool fasta file; feature corresponds to the header in the query fasta file; counts is the counts of filtered hit regions of the search pool sequences with the query sequences; len_sum is the sum of the length of all counts of a search pool sequence with the query sequences; LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences; pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences; pval_min is the minimum of seekr pearson correlation p value for each search pool sequence with the query sequences. In wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta, and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min. The wide format has the unique column (not included in the long format) that summarize the overall likeliness of each search pool sequence to all the query sequences. This stat is listed under the column name 'unique_coverage_fraction', which is the fraction of the total length of the search pool sequence that is covered by the unique hit regions across all the query sequences. Overlapping hit regions are merged and only the unique regions are counted here. It also includes columns for the total length of each pool seq (seq_total_length) and the total length of the unique hit regions across all the query sequences (total_unique_coverage).
-
-
-
-
-
-<hr/>
-
-## Example pipeline to run on both forward and reverse sequences to improve hits quality
-
-Here we show an example of searching for similar regions of mouse Xist repeat A across mouse mm10 chromosome 16. Firstly we build and run the model for searching forward throughout chr16 and yield a bedfile after filtering for hit length and normalized LLR scores. Then we reverse the mouse Xist repeat A and the mm10 chromosome 16. We build and run the model on the reversed sequences and yield a bedfile in a similar way. In this way, we have the model searching for high similarity regions in both directions. If only one direction is run, all the hits are identified based on its previous sequences, which is how Hidden Markov Model works. When running in both directions, we can have hits identified based on preceding and succeeding sequences. By either merging or intersecting the bedfiles from both directions, we can improve the quality of the hits. All findhits/hmseekr_findhits function can be substituted by its variant: findhits_condE/hmseekr_findhits_condE or findhits_nol/hmseekr_findhits_nol as needed.
-
-### run forwardly
-
-query sequence: mXist_rA.fa
-background sequence: mm10_all_lncRNA.fa
-searchpool sequence: mm10_chr16.fa
-
-#### Console Example:
-
-count kmers for query and background sequences
-```
-hmseekr_kmers -fd '../fastaFiles/mXist_rA.fa' -k 4 -a ATCG -name repeatA_4 -dir '../counts/' 
-
-hmseekr_kmers -fd '../fastaFiles/mm10_all_lncRNA.fa' -k 4 -a ATCG -name lncRNA_4 -dir '../counts/' 
-```
-
-train the model
-```
-hmseekr_train -qd '../counts/repeatA_4.dict' -nd '../counts/lncRNA_4.dict' -k 4 -a ATCG -qT 0.9999 -nT 0.9999 -qPre repeatA -nPre lncRNA -dir '../markovModels/'
-```
-
-find potential hits across chr16
-```
-hmseekr_findhits -pool '../fastaFiles/mm10_chr16.fa' -m '../markovModels/repeatA_lncRNA/4/hmm.dict' -k 4 -name 'chr16_queryA' -dir '../' -a 'ATCG' -fa -pb
-```
-
-generate bedfiles after filtering: as this is the forward run, we use hmseekr_genbed
-
-```
-hmseekr_genbed -hd '../chr16_queryA_4_viterbi.txt' -o '../chr16_queryA_4_viterbi' -len 25 -llr 0.5 -pb
-```
-
-#### Python Example:
-
-```python
-from hmseekr.kmers import kmers
-from hmseekr.train import train
-from hmseekr.findhits import findhits
-from hmseekr.genbed import genbed
-
-# count kmers for query and background sequences
-qdict = kmers(fadir='../fastaFiles/mXist_rA.fa',kvec='4',
-              alphabet='ATCG',outputname='repeatA_4',
-              outputdir='../counts/')
-
-bkgdict = kmers(fadir='../fastaFiles/mm10_all_lncRNA.fa',kvec='4',
-                alphabet='ATCG',outputname='lncRNA_4',
-                outputdir='../counts/')
-
-# train the model
-fwdmodel = train(querydir='../counts/repeatA_4.dict', nulldir='../counts/lncRNA_4.dict',
-                 kvec='4', alphabet='ATCG', queryT=0.9999, nullT=0.9999,
-                 queryPrefix='repeatA', nullPrefix='lncRNA', outputdir='../markovModels/')
-
-# find potential hits across chr16
-fwdhits = findhits(searchpool='../fastaFiles/mm10_chr16.fa',
-                   modeldir='../markovModels/repeatA_lncRNA/4/hmm.dict',
-                   knum=4,outputname='chr16_queryA',outputdir='../',
-                   alphabet='ATCG',fasta=True,progressbar=True)
-
-# generate bedfiles after filtering: as this is the forward run, we use genbed
-fwdbed = genbed(hitsdir='../chr16_queryA_4_viterbi.txt', 
-                outputdir='../chr16_queryA_4_viterbi',
-                lenfilter=25, llrfilter=0.5,progressbar=True)
-
-```
-
-
-### run reversely
-
-query sequence: reversed mXist_rA.fa
-background sequence: reversed mm10_all_lncRNA.fa
-searchpool sequence: reversed mm10_chr16.fa
-
-#### Console Example:
-
-reverse query, background and searchpool sequences. Please use the hmseekr_fastarev to reverse sequences to ensure proper formats for later steps
-```
-hmseekr_fastarev -i '../fastaFiles/mXist_rA.fa' -o '../fastaFiles/mXist_rA_rev.fa'
-
-hmseekr_fastarev -i '../fastaFiles/mm10_all_lncRNA.fa' -o '../fastaFiles/mm10_all_lncRNA_rev.fa'
-
-hmseekr_fastarev -i '../fastaFiles/mm10_chr16.fa' -o '../fastaFiles/mm10_chr16_rev.fa'
-```
-
-count kmers for reversed query and background sequences
-```
-hmseekr_kmers -fd '../fastaFiles/mXist_rA_rev.fa' -k 4 -a ATCG -name repeatA_4_rev -dir '../counts/' 
-
-hmseekr_kmers -fd '../fastaFiles/mm10_all_lncRNA_rev.fa' -k 4 -a ATCG -name lncRNA_4_rev -dir '../counts/' 
-```
-
-train the model
-```
-hmseekr_train -qd '../counts/repeatA_4_rev.dict' -nd '../counts/lncRNA_4_rev.dict' -k 4 -a ATCG -qT 0.9999 -nT 0.9999 -qPre repeatA -nPre lncRNA_rev -dir '../markovModels/'
-```
-
-find potential hits reversely across chr16 
-```
-hmseekr_findhits -pool '../fastaFiles/mm10_chr16_rev.fa' -m '../markovModels/repeatA_lncRNA_rev/4/hmm.dict' -k 4 -name 'Rev_chr16_queryA' -dir '../' -a 'ATCG' -fa -pb
-```
-
-generate bedfiles after filtering: as this is the reverse run, we use hmseekr_genbedrev
-
-```
-hmseekr_genbedrev -hd '../Rev_chr16_queryA_4_viterbi.txt' -o '../Rev_chr16_queryA_4_viterbi' -len 25 -llr 0.5 -pb
-```
-
-#### Python Example:
-
-```python
-from hmseekr.fastarev import fastarev
-from hmseekr.kmers import kmers
-from hmseekr.train import train
-from hmseekr.findhits import findhits
-from hmseekr.genbedrev import genbedrev
-
-# reverse query, background and searchpool sequences
-# Please use the hmseekr_fastarev to reverse sequences to ensure proper formats for later steps
-fastarev(input_file_path='../fastaFiles/mXist_rA.fa',
-         output_file_path='../fastaFiles/mXist_rA_rev.fa')
-
-fastarev(input_file_path='../fastaFiles/mm10_all_lncRNA.fa',
-         output_file_path='../fastaFiles/mm10_all_lncRNA_rev.fa')
-
-fastarev(input_file_path='../fastaFiles/mm10_chr16.fa',
-         output_file_path='../fastaFiles/mm10_chr16_rev.fa')
-
-# count kmers for reversed query and background sequences
-revqdict = kmers(fadir='../fastaFiles/mXist_rA_rev.fa',kvec='4',
-                 alphabet='ATCG',outputname='repeatA_4_rev',
-                 outputdir='../counts/')
-
-revbkgdict = kmers(fadir='../fastaFiles/mm10_all_lncRNA_rev.fa',kvec='4',
-                   alphabet='ATCG',outputname='lncRNA_4_rev',
-                   outputdir='../counts/')
-
-# train the model
-revmodel = train(querydir='../counts/repeatA_4_rev.dict', nulldir='../counts/lncRNA_4_rev.dict',
-                 kvec='4', alphabet='ATCG', queryT=0.9999, nullT=0.9999,
-                 queryPrefix='repeatA', nullPrefix='lncRNA_rev', outputdir='../markovModels/')
-
-# find potential hits reversely across chr16
-revhits = findhits(searchpool='../fastaFiles/mm10_chr16_rev.fa',
-                   modeldir='../markovModels/repeatA_lncRNA_rev/4/hmm.dict',
-                   knum=4,outputname='Rev_chr16_queryA',outputdir='../',
-                   alphabet='ATCG',fasta=True,progressbar=True)
-
-# generate bedfiles after filtering: as this is the reverse run, we use genbedrev
-revbed = genbedrev(hitsdir='../Rev_chr16_queryA_4_viterbi.txt', 
-                   outputdir='../Rev_chr16_queryA_4_viterbi',
-                   lenfilter=25, llrfilter=0.5,progressbar=True)
-
-```
-
-
-### further analysis based on the bedfiles from both run
-
-Each bedfiles would have the score column (5th), which is the normalized LLR score. We can treat this score as the quaility of each hit: the higher the score, the more similar the hit to the query. Therefore, if needed, hits region inside the bedfiles can also be sorted based on the score column. Users then can decided to apply further filters such as only taking the top 100 hits. This step can be easily done in Excel, R or Python. Please choose the method that works best for you.
-
-
-For both forward and reverse run, the bedfiles have the correct start and end cooridnates. That is, although the reverse run searches the chr16 reversely, the hits region has been properly recognized and transformed to a bedfile with correct start and end position. These coordinates are not reversed. Therefore, we can use [bedtools](https://bedtools.readthedocs.io/en/latest/index.html) in a “command line” environment to either [merge](https://bedtools.readthedocs.io/en/latest/content/tools/merge.html) the hits or [intersect](https://bedtools.readthedocs.io/en/latest/content/tools/intersect.html) the hits. Please refer to the [bedtools](https://bedtools.readthedocs.io/en/latest/index.html) official website for installation guide.
-
-
-#### merge the bedfiles
-
-To merge the bedfiles, we firstly need to concatenate both bedfiles into one file
-```
-cat chr16_queryA_4_viterbi.bed Rev_chr16_queryA_4_viterbi.bed > Comb_chr16_queryA_4_viterbi.bed
-```
-
-Before merging, it is always good to sort the bedfiles
-```
-sort -k1,1 -k2,2n Comb_chr16_queryA_4_viterbi.bed > Comb_chr16_queryA_4_viterbi_sorted.bed
-```
-
-Merge the bedfiles. here we decide to take the mean score (5th column, normalized LLR) of the overlapping regions as the new score for the merged region. If this operation needs to be changed, please refer to the [merge](https://bedtools.readthedocs.io/en/latest/content/tools/merge.html) function website.
-
-```
-# load the module if working on HPC
-module load bedtools
-
-bedtools merge -i Comb_chr16_queryA_4_viterbi_sorted.bed -s -c 4,5,6 -o distinct,mean,distinct > chr16_queryA_4_viterbi_sorted_merged.bed
-```
-Users can choose to further filter the hits in the chr16_queryA_4_viterbi_sorted_merged.bed file based on the score column (5th), by either enforcing a threshold or order and choose the top 100 hits.
-
-
-#### intersect the bedfiles
-
-Before intersecting, it is always good to sort the bedfiles
-```
-sort -k1,1 -k2,2n chr16_queryA_4_viterbi.bed > chr16_queryA_4_viterbi_sorted.bed
-
-sort -k1,1 -k2,2n Rev_chr16_queryA_4_viterbi.bed > Rev_chr16_queryA_4_viterbi_sorted.bed
-```
-
-Intersect the bedfiles. Here we use -s to enforce the intersection on the same strand. The name and score for the intersected region will be inherited from the -a input. For example, -a has the entry: chr1 0 10 fwd 0.9 + and -b has entry: chr1 5 12 rev 0.2 +. The intersected region will be reported as: chr1 5 10 fwd 0.9 +. If this operation needs to be changed, please refer to the [intersect](https://bedtools.readthedocs.io/en/latest/content/tools/intersect.html) function website.
-
-```
-# load the module if working on HPC
-module load bedtools
-
-bedtools intersect -a chr16_queryA_4_viterbi_sorted.bed -b Rev_chr16_queryA_4_viterbi_sorted.bed -s > chr16_queryA_4_viterbi_intsct.bed
-```
-The -wb argument can be added to report the original -b feature in the same row with the intersected feature. In this way, the first 6 columns are for the intersected feature, with the 4th (name), 5th (score) same as the -a feature, and the following 6 columns report the original -b feature. Users can recalcualte the score (5th column) for the intersected region by considering scores from both -a and -b feature. 
-```
-# load the module if working on HPC
-module load bedtools
-
-bedtools intersect -a chr16_queryA_4_viterbi_sorted.bed -b Rev_chr16_queryA_4_viterbi_sorted.bed -s -wb > chr16_queryA_4_viterbi_intsct.bed
-```
-Users can choose to further filter the hits in the chr16_queryA_4_viterbi_sorted_intsct.bed file based on the score column (5th), by either enforcing a threshold or order and choose the top 100 hits.
-
-
-#### get fasta sequence from the bedfiles
-
-Using bedtools [getfasta](https://bedtools.readthedocs.io/en/latest/content/tools/getfasta.html) we can also easily extract the fasta sequence for each regions defined in the bedfile
-```
-# load the module if working on HPC
-module load bedtools
-
-bedtools getfasta -fi mm10_genome.fa -bed chr16_queryA_4_viterbi_intsct.bed -fo chr16_queryA_4.fa -s
-```
-
 
 
 
