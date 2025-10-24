@@ -449,12 +449,7 @@ def seqstosummary(queryfadir, transdf, lenfilter, nullfadir, searchpool, bkgfadi
             combstats_summary_wide = combstats_summary_wide.reset_index()
             # calculate total unique coverage for each seq in the pool across all the query features
             # this stat is only available in wide format
-            # coverage_dict = combstats.groupby('seqName').apply(unique_coverage_length)
-            coverage_dict = (
-                combstats.loc[:, ['seqName', 'Start', 'End']]
-                        .groupby('seqName', sort=False)
-                        .apply(unique_coverage_length)
-            )
+            coverage_dict = combstats.groupby('seqName').apply(unique_coverage_length, include_groups=False)
             # Convert the Series to a DataFrame. This will make 'seqname' a column.
             coverage_df = coverage_dict.reset_index(name='total_unique_coverage')
             # get the total length of each pool seq
