@@ -419,6 +419,9 @@ def seqstosummary(queryfadir, transdf, lenfilter, nullfadir, searchpool, bkgfadi
         return None
     else: 
         
+        # save combstats as raw data
+        combstats.to_csv(f'{newDir}{outputname}_raw.csv',index=False)
+
         # group by the search pool sequence and the feature name
         combstats_summary = combstats.groupby(['seqName', 'feature']).agg({
             'Start': 'count',
