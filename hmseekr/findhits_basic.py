@@ -9,8 +9,7 @@
 # also takes in the precalculated model (train function)
 # along the searchpool fasta sequences, similarity scores to query seq will be calculated based on the emission probabilities (E) established in the model
 # hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment
-# kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment
-# kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q state minus the log likelihood of them being in the N state
+# and the actual sequence of the hit segment
 
 
 ### Input:
@@ -26,7 +25,7 @@
 ### Output:
 # a dataframe containing information about the hits regions: highly similar regions to query seq based on the precalculated model within the input fasta file
 # information about the hits regions includes: the sequence header from the input fasta file, start and end location of the hit segment
-# kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment if fasta=True
+# and the actual sequence of the hit segment if fasta=True
 
 ### Example:
 # from hmseekr.findhits_basic import findhits_basic
@@ -89,10 +88,10 @@ dataDict: dict
     key is a sequence header
     value is a dataframe
     Format example:
-    {'>mm10kcnq1ot1':     Start    End    kmerLLR        seqName                                           Sequence
-    0     835    999  84.173049  >mm10kcnq1ot1  ATTCGTGCCGCGCTTTCGCGGCTGGGCTCCATCTTCGTTTTGCCGC...
-    1   79184  79257  72.086333  >mm10kcnq1ot1  ATTATTTTGTGTCTTTTTTTGTTTGTTTGTTTTTTGTTTTTTGTTT...
-    2   69556  69605  63.331314  >mm10kcnq1ot1  TCCCAACCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.....}
+    {'>mm10kcnq1ot1':     Start    End        seqName                                           Sequence
+    0     835    999  >mm10kcnq1ot1  ATTCGTGCCGCGCTTTCGCGGCTGGGCTCCATCTTCGTTTTGCCGC...
+    1   79184  79257  >mm10kcnq1ot1  ATTATTTTGTGTCTTTTTTTGTTTGTTTGTTTTTTGTTTTTTGTTT...
+    2   69556  69605  >mm10kcnq1ot1  TCCCAACCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.....}
 O: list
     a list of k length kmers extracted from sequence and exclude all kmers with 'N' inside.
     Format example:
@@ -199,7 +198,7 @@ def hmmCalc(tHead,tSeq,hmm,k):
     # Return sequences of HMM hits, and their start and end locations in the original sequence
     seqHits,starts,ends = corefunctions.formatHits(groupedHits,k,tSeq)
     if (seqHits):
-        df = corefunctions.hitOutput(seqHits,starts,ends,k,E,tHead,tSeq)
+        df = corefunctions.hitOutput(seqHits,starts,ends,tHead)
         return tHead,df
     # Alternative output (transcript by transcript)
 
@@ -259,15 +258,15 @@ def findhits_basic(searchpool,modeldir,knum,outputname='hits',outputdir='./',alp
         dataFrames['Start']+=1 #1-start coordinates
         dataFrames['End']
         dataFrames['Length'] = dataFrames['End'] - dataFrames['Start'] +1
-        dataFrames = dataFrames[['Start','End','Length','kmerLLR','seqName','Sequence']]
+        dataFrames = dataFrames[['Start','End','Length','seqName','Sequence']]
         if not fasta:
-            dataFrames = dataFrames[['Start','End','Length','kmerLLR','seqName']]
-        dataFrames.sort_values(by='kmerLLR',ascending=False,inplace=True)
+            dataFrames = dataFrames[['Start','End','Length','seqName']]
+        dataFrames.sort_values(by='Start',ascending=True,inplace=True)
         dataFrames.reset_index(inplace=True,drop=True)
     else:
-        dataFrames = pd.DataFrame(columns=['Start', 'End', 'Length', 'kmerLLR', 'seqName', 'Sequence'])
+        dataFrames = pd.DataFrame(columns=['Start', 'End', 'Length', 'seqName', 'Sequence'])
         if not fasta:
-            dataFrames = dataFrames[['Start', 'End', 'Length', 'kmerLLR', 'seqName']]
+            dataFrames = dataFrames[['Start', 'End', 'Length','seqName']]
 
     mDir = outputdir
     if not mDir.endswith('/'):

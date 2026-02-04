@@ -349,7 +349,7 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
                 sim = seekrPearson(hits_count.counts,query_count.counts)
                 hits['seekr_r']=sim
 
-                # rank the hits by kmerLLR score and only keep the top 50 hits if there are more than 20 hits
+                # rank the hits by seekr_r score and only keep the top 50 hits if there are more than 20 hits
                 if len(hits_seq) > 50:
                     hits = hits.sort_values(by='seekr_r', ascending=False)
                     hitstop50 = hits.iloc[:50]

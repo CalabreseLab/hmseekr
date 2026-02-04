@@ -10,7 +10,7 @@
 # also takes in the precalculated model (train function)
 # along the searchpool fasta sequences, similarity scores to query seq will be calculated based on the model
 # hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment
-# kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment
+# and the actual sequence of the hit segment
 # difference from the basic findhits function is that this function calculate the emission probability of the next word given the current word
 # as the shift is by 1 nt, the next word has k-1 overlap with the current word
 # for example, if the current word is 'TAGC', the next possible words are 'AGCA', 'AGCT', 'AGCC', 'AGCG'
@@ -31,7 +31,7 @@
 ### Output:
 # a dataframe containing information about the hits regions: highly similar regions to query seq based on the precalculated model within the input fasta file
 # information about the hits regions includes: the sequence header from the input fasta file, start and end location of the hit segment
-# kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment if fasta=True
+# and the actual sequence of the hit segment if fasta=True
 
 ### Example:
 # from hmseekr.findhits_condE import findhits_condE
@@ -96,10 +96,10 @@ dataDict: dict
     key is a sequence header
     value is a dataframe
     Format example:
-    {'>mm10kcnq1ot1':     Start    End    kmerLLR        seqName                                           Sequence
-    0     835    999  84.173049  >mm10kcnq1ot1  ATTCGTGCCGCGCTTTCGCGGCTGGGCTCCATCTTCGTTTTGCCGC...
-    1   79184  79257  72.086333  >mm10kcnq1ot1  ATTATTTTGTGTCTTTTTTTGTTTGTTTGTTTTTTGTTTTTTGTTT...
-    2   69556  69605  63.331314  >mm10kcnq1ot1  TCCCAACCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.....}
+    {'>mm10kcnq1ot1':     Start    End        seqName                                           Sequence
+    0     835    999  >mm10kcnq1ot1  ATTCGTGCCGCGCTTTCGCGGCTGGGCTCCATCTTCGTTTTGCCGC...
+    1   79184  79257  >mm10kcnq1ot1  ATTATTTTGTGTCTTTTTTTGTTTGTTTGTTTTTTGTTTTTTGTTT...
+    2   69556  69605  >mm10kcnq1ot1  TCCCAACCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA.....}
 O: list
     a list of k length kmers extracted from sequence and exclude all kmers with 'N' inside.
     Format example:
@@ -219,30 +219,30 @@ def viterbi_new(O,A,E,states,pi,cE,oIdx):
     return backtrack
 
 
-''' LLR
-Return log-likelihood ratio between two models in HMM for + k-mers
-Input: sequnce of hits, value of k, k-mer frequencies in HMM emmission matrix and conditioned emmission matrix
-Output: Array of LLRs for each hit
+# ''' LLR
+# Return log-likelihood ratio between two models in HMM for + k-mers
+# Input: sequnce of hits, value of k, k-mer frequencies in HMM emmission matrix and conditioned emmission matrix
+# Output: Array of LLRs for each hit
 
-hits = seqHits: ['GGCCCGGTGTGGTCGGCCTCATTTTGGATTACTTCGGTGGGCTTCTCCTCGG...', 'TCCGTGTGGATCGTTTCAGCACGGATC......'......]
-'''
-def LLR_new(hits,k,E,cE):
-    arr = np.zeros(len(hits))
-    for i,hit in enumerate(hits):
-        LLRPos,LLRNeg=0,0
-        # calculate the first kmer based on E
-        kmer=hit[0:k]
-        LLRPos += E['+'][kmer]
-        LLRNeg += E['-'][kmer]
-        # calculate the rest of the kmers based on cE
-        for j in range(1,len(hit)-k+1):
-            prevkmer=hit[j-1:j-1+k]
-            kmer=hit[j:j+k]
-            LLRPos += cE['+'][prevkmer][kmer]
-            LLRNeg += cE['-'][prevkmer][kmer]
-        llr = LLRPos-LLRNeg
-        arr[i] = llr
-    return arr
+# hits = seqHits: ['GGCCCGGTGTGGTCGGCCTCATTTTGGATTACTTCGGTGGGCTTCTCCTCGG...', 'TCCGTGTGGATCGTTTCAGCACGGATC......'......]
+# '''
+# def LLR_new(hits,k,E,cE):
+#     arr = np.zeros(len(hits))
+#     for i,hit in enumerate(hits):
+#         LLRPos,LLRNeg=0,0
+#         # calculate the first kmer based on E
+#         kmer=hit[0:k]
+#         LLRPos += E['+'][kmer]
+#         LLRNeg += E['-'][kmer]
+#         # calculate the rest of the kmers based on cE
+#         for j in range(1,len(hit)-k+1):
+#             prevkmer=hit[j-1:j-1+k]
+#             kmer=hit[j:j+k]
+#             LLRPos += cE['+'][prevkmer][kmer]
+#             LLRNeg += cE['-'][prevkmer][kmer]
+#         llr = LLRPos-LLRNeg
+#         arr[i] = llr
+#     return arr
 
 
 '''
@@ -251,18 +251,18 @@ E: emission matrix
 seqHits: ['GGCCCGGTGTGGTCGGCCTCATTTTGGATTACTTCGGTGGGCTTCTCCTCGG...', 'TCCGTGTGGATCGTTTCAGCACGGATC......'......]
 '''
 
-def hitOutput_new(seqHits,starts,ends,k,E,tHead,cE):
+def hitOutput_new(seqHits,starts,ends,tHead):
     info = list(zip(seqHits,starts,ends)) # example [('GGCCCGGTGTGGTCGGCCTCATTTTGGAT.......', 88, 177),......]
     dataDict = dict(zip(list(range(len(seqHits))),info))
     df = pd.DataFrame.from_dict(dataDict,orient='index')
     #calculate log-likelihood ratio of k-mers in the + model vs - model
-    df['kmerLLR'] = LLR_new(seqHits,k,E,cE)
+    # df['kmerLLR'] = LLR_new(seqHits,k,E,cE)
     df['seqName'] = tHead
-    df.columns = ['Sequence','Start','End','kmerLLR','seqName']
-    df.sort_values(by='kmerLLR',inplace=True,ascending=False)
+    df.columns = ['Sequence','Start','End','seqName']
+    df.sort_values(by='Start',inplace=True,ascending=True)
     df.reset_index(inplace=True)
-    fa = df['Sequence']
-    df = df[['Start','End','kmerLLR','seqName','Sequence']]
+    # fa = df['Sequence']
+    df = df[['Start','End','seqName','Sequence']]
 
     return df
 
@@ -336,7 +336,7 @@ def hmmCalc_new(tHead,tSeq,hmm,k,alphabet):
     # Return sequences of HMM hits, and their start and end locations in the original sequence
     seqHits,starts,ends = corefunctions.formatHits(groupedHits,k,tSeq)
     if (seqHits):
-        df = hitOutput_new(seqHits,starts,ends,k,E,tHead,cE)
+        df = hitOutput_new(seqHits,starts,ends,tHead)
         return tHead,df
     # Alternative output (transcript by transcript)
 
@@ -425,15 +425,15 @@ def findhits_condE(searchpool,modeldir,knum,outputname='hits',outputdir='./',alp
         dataFrames['Start']+=1 #1-start coordinates
         dataFrames['End']
         dataFrames['Length'] = dataFrames['End'] - dataFrames['Start'] +1
-        dataFrames = dataFrames[['Start','End','Length','kmerLLR','seqName','Sequence']]
+        dataFrames = dataFrames[['Start','End','Length','seqName','Sequence']]
         if not fasta:
-            dataFrames = dataFrames[['Start','End','Length','kmerLLR','seqName']]
-        dataFrames.sort_values(by='kmerLLR',ascending=False,inplace=True)
+            dataFrames = dataFrames[['Start','End','Length','seqName']]
+        dataFrames.sort_values(by='Start',ascending=True,inplace=True)
         dataFrames.reset_index(inplace=True,drop=True)
     else:
-        dataFrames = pd.DataFrame(columns=['Start', 'End', 'Length', 'kmerLLR', 'seqName', 'Sequence'])
+        dataFrames = pd.DataFrame(columns=['Start', 'End', 'Length', 'seqName', 'Sequence'])
         if not fasta:
-            dataFrames = dataFrames[['Start', 'End', 'Length', 'kmerLLR', 'seqName']]
+            dataFrames = dataFrames[['Start', 'End', 'Length', 'seqName']]
 
     mDir = outputdir
     if not mDir.endswith('/'):

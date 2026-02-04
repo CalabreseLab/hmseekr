@@ -147,41 +147,42 @@ E: emission matrix
 seqHits: ['GGCCCGGTGTGGTCGGCCTCATTTTGGATTACTTCGGTGGGCTTCTCCTCGG...', 'TCCGTGTGGATCGTTTCAGCACGGATC......'......]
 '''
 
-def hitOutput(seqHits,starts,ends,k,E,tHead,tSeq):
+def hitOutput(seqHits,starts,ends,tHead):
     info = list(zip(seqHits,starts,ends)) # example [('GGCCCGGTGTGGTCGGCCTCATTTTGGAT.......', 88, 177),......]
     dataDict = dict(zip(list(range(len(seqHits))),info))
     df = pd.DataFrame.from_dict(dataDict,orient='index')
     #calculate log-likelihood ratio of k-mers in the + model vs - model
-    df['kmerLLR'] = LLR(seqHits,k,E)
+    #df['kmerLLR'] = LLR(seqHits,k,E)
     df['seqName'] = tHead
-    df.columns = ['Sequence','Start','End','kmerLLR','seqName']
-    df.sort_values(by='kmerLLR',inplace=True,ascending=False)
+    #df.columns = ['Sequence','Start','End','kmerLLR','seqName']
+    df.columns = ['Sequence','Start','End','seqName']
+    df.sort_values(by='Start',inplace=True,ascending=True)
     df.reset_index(inplace=True)
-    fa = df['Sequence']
-    df = df[['Start','End','kmerLLR','seqName','Sequence']]
+    #fa = df['Sequence']
+    df = df[['Start','End','seqName','Sequence']]
 
     return df
 
 
 
-''' LLR
-Return log-likelihood ratio between two models in HMM for + k-mers
-Input: sequnce of hits, value of k, k-mer frequencies in HMM emmission matrix
-Output: Array of LLRs for each hit
+# ''' LLR
+# Return log-likelihood ratio between two models in HMM for + k-mers
+# Input: sequnce of hits, value of k, k-mer frequencies in HMM emmission matrix
+# Output: Array of LLRs for each hit
 
-hits = seqHits: ['GGCCCGGTGTGGTCGGCCTCATTTTGGATTACTTCGGTGGGCTTCTCCTCGG...', 'TCCGTGTGGATCGTTTCAGCACGGATC......'......]
-'''
-def LLR(hits,k,E):
-    arr = np.zeros(len(hits))
-    for i,hit in enumerate(hits):
-        LLRPos,LLRNeg=0,0
-        for j in range(len(hit)-k+1):
-            kmer=hit[j:j+k]
-            LLRPos += E['+'][kmer]
-            LLRNeg += E['-'][kmer]
-        llr = LLRPos-LLRNeg
-        arr[i] = llr
-    return arr
+# hits = seqHits: ['GGCCCGGTGTGGTCGGCCTCATTTTGGATTACTTCGGTGGGCTTCTCCTCGG...', 'TCCGTGTGGATCGTTTCAGCACGGATC......'......]
+# '''
+# def LLR(hits,k,E):
+#     arr = np.zeros(len(hits))
+#     for i,hit in enumerate(hits):
+#         LLRPos,LLRNeg=0,0
+#         for j in range(len(hit)-k+1):
+#             kmer=hit[j:j+k]
+#             LLRPos += E['+'][kmer]
+#             LLRNeg += E['-'][kmer]
+#         llr = LLRPos-LLRNeg
+#         arr[i] = llr
+#     return arr
 
 
 # def getRawKmerCount(seq, k):

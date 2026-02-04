@@ -79,8 +79,7 @@ this function takes in a fasta file which defines the region to search for poten
 also takes in the precalculated model (hmseekr_train function)
 along the searchpool fasta sequences, similarity scores to query seq will be calculated based on the emission probabilities (E) established in the model
 hits segments (highly similar regions) would be reported along with the sequence header from the input fasta file, start and end location of the hit segment
-kmer log likelihood score (kmerLLR), and the actual sequence of the hit segment
-kmerLLR is defined as the sum of the log likelihood of each k-mer in the hit sequence being in the Q state minus the log likelihood of them being in the N state
+and the actual sequence of the hit segment
 
 Example:
 use the previously trained model (hmm.dict by hmseekr_train function) to search for highly similar regions to query seq (repeatA)
@@ -170,7 +169,6 @@ this function takes in the output of either findhits function and the query sequ
 it fit the background sequences to the common10 distributions and takes the best ranked distribution
 it calculates the seekr pearson correlation r and p values between the hit sequences and the query sequence based on the best ranked distribution
 it adds the seekr r and p value to the hits dataframe
-on top of the existing kmer log likelihood score (kmerLLR)
 the seekr r and p value could provide additional information about the similarity between the hit sequences and the query sequence
 outputname is automatically generated as the input findhits filename with '_seekr' appended to it
 
@@ -189,9 +187,9 @@ SEQSTOSUMMARY_DOC = """
 Description: 
 This function takes in a fasta file of multiple query sequences, a transtion probabilty dataframe, a search pool fasta file, a null fasta file and a background fasta file.
 and generates a summary dataframe where each row contains a sequence in the search pool fasta file
-and eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min
+and six columns: seqName, feature, counts, len_sum, pval_median, pval_min
 or a wide format dataframe where each row corresponds to a sequence in the search pool fasta file
-and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min
+and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_pval_median, eachfeature_pval_min
 wide format has the unique column (not included in the long format) that summarize the overall likeliness of each search pool sequence to all the query sequences
 this stat is listed under the column name 'unique_coverage_fraction' in the wide format dataframe
 which is the fraction of the total length of the search pool sequence that is covered by the unique hit regions across all the query sequences
@@ -211,21 +209,19 @@ please include 'lenmin' and 'lenmax' as the first row (the column names) for the
 the length filter for each query sequence can be different based on the length of the query sequence
 make sure the order of the rows in the transition probability dataframe and length filter csv file matches the order of the query sequences in the fasta file
 the function will run the kmers, train, findhits_condE and hitseekr functions for each query sequence
-then the results can be filtered by the length of the hit regions, the kmer log likelihood ratio (kmerLLR) and the seekr pearson correlation p value
+then the results can be filtered by the length of the hit regions, and the seekr pearson correlation p value
 finally for each search pool sequence, the function will calculate the counts of filtered hit regions with a specific query sequence
-and also the sum of kmerLLR and length, the median of kmerLLR and seekr pval, and the minimal seekr pval for all the counts of a search pool sequence with each the query sequences
+and also seekr pval, and the minimal seekr pval for all the counts of a search pool sequence with each the query sequences
 for long format: each row of the output dataframe contains a sequence in the search pool fasta
-and has eight columns: seqName, feature, counts, len_sum, LLR_sum, LLR_median, pval_median, pval_min
+and has six columns: seqName, feature, counts, len_sum, pval_median, pval_min
 seqName corresponds to the header in the search pool fasta file
 feature corresponds to the header in the query fasta file
 counts is the counts of filtered hit regions of the search pool sequences with the query sequences
 len_sum is the sum of the length of all counts of a search pool sequence with the query sequences
-LLR_sum is the sum of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
-LLR_median is the median of kmer log likelihood ratio (kmerLLR) for each search pool sequence with the query sequences
 pval_median is the median of seekr pearson correlation p value for each search pool sequence with the query sequences
 pval_min is the minimal seekr pearson correlation p value for each search pool sequence with the query sequences
 for wide format: each row of the output dataframe corresponds to a sequence in the search pool fasta
-and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_LLR_sum, eachfeature_LLR_median, eachfeature_pval_median, eachfeature_pval_min
+and columns are eachfeature_counts, eachfeature_len_sum, eachfeature_pval_median, eachfeature_pval_min
 wide format has the unique column (not included in the long format) that summarize the overall likeliness of each search pool sequence to all the query sequences
 this stat is listed under the column name 'unique_coverage_fraction' in the wide format dataframe
 which is the fraction of the total length of the search pool sequence that is covered by the unique hit regions across all the query sequences
@@ -236,9 +232,9 @@ the output dataframe can then be used to generalize an overall likeliness of eac
 
 Example:
 search all genes on chr16 for the potential hit counts and similarities to the query sequences include mXist repeat A, B, C and E,
-filtering and keep hit sqeuences with length provided in lenfilter, kmerLLR greater than 0 and p val less than 0.5 for stats calculation. 
+filtering and keep hit sqeuences with length provided in lenfilter and p val less than 0.5 for stats calculation. 
 the conditioned emission findhits_condE function is used, print the output in wide format
-    $ hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -lf './lenfilter.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -llrf 0 -pf 0.5 -name 'seqstosummary_results' -dir './seqstosummary/' -format wide -a 'ATCG' -pb
+    $ hmseekr_seqstosummary -qf './fastaFiles/mXist_repeats.fa' -td './transdf.csv' -lf './lenfilter.csv' -nf './fastaFiles/all_lncRNA.fa' -pool './fastaFiles/chr16.fa' -bkgf './fastaFiles/bkg.fa' -k 4 -fc 'findhits_condE' -pf 0.5 -name 'seqstosummary_results' -dir './seqstosummary/' -format wide -a 'ATCG' -pb
 
 
 For more details of the inputs and outputs, please refer to the manual listed under https://github.com/CalabreseLab/hmseekr/
@@ -447,7 +443,6 @@ def console_hmseekr_seqstosummary():
     parser.add_argument("-bkgf","--bkgfadir", type=str,help='Path to the fasta file of bakground sequences for seekr normalization vectors(see manual for details)', required=True)
     parser.add_argument("-k","--knum",type=int,help='Value of k to use as an integer. Must be one single integer', required=True)
     parser.add_argument("-fc","--func",type=str,help='which findhits function to use, options are findhits_condE and findhits_basic', default='findhits_condE')
-    parser.add_argument("-llrf","--llrfilter",type=float,help='only keep hits sequences that have kmerLLR > llrfilter for calculating stats in the output, default=0', default=0.0)
     parser.add_argument("-pf","--pfilter",type=float,help='only keep hits sequences that have seekr pearson correlation p value < pfilter for calculating stats in the output, default=1.1', default=1.1)
     parser.add_argument("-name","--outputname",type=str,help='File name for output dataframe', default='seqstosummary_results')
     parser.add_argument("-dir","--outputdir",type=str,help='Directory to save output dataframe and intermediate files',default='./seqstosummary/')
@@ -466,7 +461,6 @@ def console_hmseekr_seqstosummary():
         args.bkgfadir,
         args.knum,
         args.func,
-        args.llrfilter,
         args.pfilter,
         args.outputname,
         args.outputdir,
