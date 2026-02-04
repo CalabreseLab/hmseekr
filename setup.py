@@ -25,7 +25,7 @@ else:
 requirements = [
     "tqdm",
     "numpy",
-    "pandas",
+    "pandas>2.2.0",
     "numexpr>=2.8.4",
     "scipy",
     "seekr",
