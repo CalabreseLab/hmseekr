@@ -28,7 +28,7 @@ requirements = [
     "pandas>2.2.0",
     "numexpr>=2.8.4",
     "scipy",
-    "seekr",
+    "matplotlib>=3.7",
 ]
 
 # ensure matplotlib to be greater than 3.5.3 which is compatible with python 3.7 and above
