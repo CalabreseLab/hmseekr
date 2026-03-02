@@ -113,10 +113,10 @@
 
 ########################################################################################################
 
-from seekr.kmer_counts import BasicCounter as seekrBasicCounter 
-from seekr.fasta_reader import Reader as seekrReader
-from seekr.find_pval import find_pval
-from seekr.find_dist import find_dist
+from hmseekr.seekrcore import seekrBasicCounter 
+from hmseekr.seekrcore import seekrReader
+from hmseekr.seekrcore import find_pval
+from hmseekr.seekrcore import find_dist
 
 from hmseekr.train import train
 from hmseekr.kmers import kmers

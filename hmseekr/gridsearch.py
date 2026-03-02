@@ -8,14 +8,14 @@
 # ranges and steps for query to query transition rate (qT) and null to null transition rate (nT)
 # a specific kmer number and performs the train function and findhits_condE function for each combination of qT and nT
 # within the hits sequences (findhits_condE function results), only keep the sequence with length less than lenmax and greater than lenmin 
-# then calculates pearson correlation r score (seekr.pearson) between the filtered hit sequences (findhits_condE results) and the query sequence
+# then calculates pearson correlation r score (seekrPearson) between the filtered hit sequences (findhits_condE results) and the query sequence
 # it returns a dataframe (.csv file) containing the qT, nT, kmer number, the total number of hits sequences and the median, standard deviation of the hits sequences' pearson correlation r score to the query sequence
 # and the median, standard deviation of the length of the hits sequences
-# then if there are more than 50 hits, it calculates the same stats for the top 50 hits sequences, ranked by their seekr r score (seekr.pearson) 
+# then if there are more than 50 hits, it calculates the same stats for the top 50 hits sequences, ranked by their seekr r score (seekrPearson) 
 # if there are less than 50 hits in total, the stats for the top 50 hits are the same as the stats for all the hits
 # if query fasta contains more than one sequence, all the sequences in query fasta file will be merged to one sequence 
-# for calculating kmer count files for hmseekr (hmseekr.kmers) and for calculating seekr.pearson 
-# this function requires the seekr package to be installed
+# for calculating kmer count files for hmseekr (hmseekr.kmers) and for calculating seekrPearson 
+# this function does not requires the seekr package to be installed
 # as there are iterations of train and findhits_condE functions, which could take long time, it is recommended to run this function on a high performance computing cluster
 # variants of findhits functions can be specified to run
 
@@ -23,7 +23,7 @@
 ### Input:
 # queryfadir: Path to the fasta file of query seq (e.g. functional regions of a ncRNA)
 # if query fasta contains more than one sequence 
-# all the sequences in query fasta file will be merged to one sequence for calculating seekr.pearson and for calculating kmer count files for hmseekr
+# all the sequences in query fasta file will be merged to one sequence for calculating seekrPearson and for calculating kmer count files for hmseekr
 # nullfadir: Path to the fasta file of null model sequences (e.g. transcriptome, genome, etc.)
 # searchpool: Path to fasta file which defines the region to search for potential hits (highly similar regions) based on the precalculated model (train function)
 # bkgfadir: fasta file directory for background sequences, which serves as the normalizing factor for the input of seekr_norm_vectors and used by seekr_kmer_counts function
@@ -77,9 +77,9 @@
 
 ########################################################################################################
 
-from seekr.kmer_counts import BasicCounter as seekrBasicCounter 
-from seekr.pearson import pearson as seekrPearson
-from seekr.fasta_reader import Reader as seekrReader
+from hmseekr.seekrcore import seekrBasicCounter 
+from hmseekr.seekrcore import seekrPearson
+from hmseekr.seekrcore import seekrReader
 
 from hmseekr import train
 from hmseekr import kmers
@@ -238,7 +238,7 @@ def gridsearch(queryfadir, nullfadir, searchpool, bkgfadir, knum,
     
     if len(qseqs) > 1:
         print('More than one sequence in query fasta file')
-        print('All the query sequences will be merged for calculating seekr.pearson')
+        print('All the query sequences will be merged for calculating seekrPearson')
         print('Merged fasta file is saved under seqs folder as seekrquery.fa')
         seekrqueryfadir = f'{newDir}seqs/seekrquery.fa'
         qseqs = '$'.join(qseqs)
