@@ -3,6 +3,10 @@
 FROM python:3.9.5-slim-buster
 
 # Install gcc and other necessary build tools
+RUN printf "deb http://archive.debian.org/debian buster main\n" > /etc/apt/sources.list && \
+    printf "deb http://archive.debian.org/debian-security buster/updates main\n" >> /etc/apt/sources.list && \
+    apt-get -o Acquire::Check-Valid-Until=false update && \
+    apt-get install -y gcc make
 RUN apt-get update && apt-get install -y \
     gcc \
     make
