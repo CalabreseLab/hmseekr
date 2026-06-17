@@ -283,7 +283,7 @@ def console_hmseekr_train():
     parser.add_argument("-k","--kvec",type=str,help='Comma delimited string of possible k-mer values, must be found in the k-mer count file', required=True)
     parser.add_argument("-a","--alphabet",type=str,help='String, Alphabet to generate k-mers (e.g. ATCG)',default='ATCG')
     parser.add_argument("-qT","--queryT",type=float,help='Probability of query to query transition', default=0.99)  
-    parser.add_argument("-nT","--nullT",type=float,help='Probability of null to null transition', default=0.93) 
+    parser.add_argument("-nT","--nullT",type=float,help='Probability of null to null transition', default=0.9) 
     parser.add_argument("-qPre","--queryPrefix",type=str,help='prefix file name for query', default='query')
     parser.add_argument("-nPre","--nullPrefix",type=str,help='prefix file name for null', default='null')
     parser.add_argument("-dir","--outputdir",type=str,help='path of output directory to save output trained model file',default='./')
