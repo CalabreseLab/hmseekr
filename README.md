@@ -108,7 +108,7 @@ testmodel = train(querydir='./counts/repeatA.dict', nulldir='./counts/all_lncRNA
 3. kvec (-k): Comma delimited string of possible k-mer values. For example, '3,4,5' or just '4'. Numbers in kvec must be found in the k-mer count file (precalculated by kmers function)
 4. alphabet (-a): Alphabet to generate k-mers, default=ATCG
 5. queryT (-qT): Probability of query to query transition, default=0.99, should be between 0 and 1 but not equal to 0 or 1
-6. nullT (-nT): Probability of null to null transition, default=0.93, should be between 0 and 1 but not equal to 0 or 1
+6. nullT (-nT): Probability of null to null transition, default=0.9, should be between 0 and 1 but not equal to 0 or 1
 7. queryPrefix (-qPre): prefix file name for query, defualt='query'
 8. nullPrefix (-nPre): prefix file name for null, defualt='null'
 9. outputdir (-dir): path of output directory to save output trained model file in .dict format, default is current directory
